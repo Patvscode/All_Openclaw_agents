@@ -1,0 +1,13 @@
+[Unit]
+Description=DGX Spark Config API (port 8095)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pmello/.openclaw/archive/workspaces/workspace-max/coding-tests/04-system-dashboard
+ExecStart=/usr/bin/python3 config-api.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
