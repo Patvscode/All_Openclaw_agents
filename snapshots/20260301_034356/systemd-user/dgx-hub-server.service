@@ -1,0 +1,12 @@
+[Unit]
+Description=DGX Spark Hub static server (port 8090)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -m http.server 8090 --bind 0.0.0.0 --directory /home/pmello/.openclaw/workspace-max/coding-tests
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
