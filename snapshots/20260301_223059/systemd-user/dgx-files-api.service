@@ -1,0 +1,13 @@
+[Unit]
+Description=DGX Spark Files API (port 8093)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pmello/.openclaw/workspace-max/coding-tests/04-system-dashboard
+ExecStart=/usr/bin/python3 files-api.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,23 @@
+[Unit]
+Description=OpenClaw Node Host (v2026.2.3-1)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart="/usr/bin/node" "/home/pmello/.npm-global/lib/node_modules/openclaw/dist/index.js" node run "--host" 127.0.0.1 --port 18789
+Restart=always
+RestartSec=5
+KillMode=process
+Environment=HOME=/home/pmello
+Environment="PATH=/home/pmello/.local/bin:/home/pmello/.npm-global/bin:/home/pmello/bin:/home/pmello/.nvm/current/bin:/home/pmello/.fnm/current/bin:/home/pmello/.volta/bin:/home/pmello/.asdf/shims:/home/pmello/.local/share/pnpm:/home/pmello/.bun/bin:/usr/local/bin:/usr/bin:/bin"
+Environment=OPENCLAW_LAUNCHD_LABEL=ai.openclaw.node
+Environment=OPENCLAW_SYSTEMD_UNIT=openclaw-node
+Environment=OPENCLAW_WINDOWS_TASK_NAME=OpenClaw Node
+Environment=OPENCLAW_TASK_SCRIPT_NAME=node.cmd
+Environment=OPENCLAW_LOG_PREFIX=node
+Environment=OPENCLAW_SERVICE_MARKER=openclaw
+Environment=OPENCLAW_SERVICE_KIND=node
+Environment=OPENCLAW_SERVICE_VERSION=2026.2.3-1
+
+[Install]
+WantedBy=default.target
