@@ -1,0 +1,6 @@
+[Unit]
+Description=Jess pipeline trace logger
+After=network.target
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /home/pmello/.openclaw/workspace-q35/scripts/jess_trace_log.py
