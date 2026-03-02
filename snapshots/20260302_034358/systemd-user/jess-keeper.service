@@ -1,0 +1,7 @@
+[Unit]
+Description=Jess keeper agent (memory scoring + RAG records)
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /home/pmello/.openclaw/workspace-q35/scripts/jess_keeper.py

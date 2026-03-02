@@ -1,0 +1,13 @@
+[Unit]
+Description=DGX Spark Stats API (port 8091)
+After=network.target ollama.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pmello/.openclaw/workspace-max/coding-tests/04-system-dashboard
+ExecStart=/usr/bin/python3 stats-api.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
