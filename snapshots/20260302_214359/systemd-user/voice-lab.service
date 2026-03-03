@@ -1,0 +1,15 @@
+[Unit]
+Description=Voice Lab API server (port 8101)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /home/pmello/.openclaw/workspace-max/coding-tests/18-voice-lab/server.py
+Restart=always
+RestartSec=5
+Environment=NO_TORCH_COMPILE=1
+Environment=PATH=/home/linuxbrew/.linuxbrew/bin:/home/pmello/.npm-global/bin:/home/pmello/bin:/usr/local/bin:/usr/bin:/bin
+Environment=HF_TOKEN_PATH=/home/pmello/.cache/huggingface/token
+
+[Install]
+WantedBy=default.target
