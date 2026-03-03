@@ -1,0 +1,1 @@
+/home/pmello/.openclaw/SHARED_CONTEXT.md
