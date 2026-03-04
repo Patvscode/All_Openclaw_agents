@@ -1,0 +1,13 @@
+[Unit]
+Description=OpenClaw Gateway Proxy (port 8094)
+After=network.target openclaw-gateway.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pmello/.openclaw/workspace-max/coding-tests/04-system-dashboard
+ExecStart=/usr/bin/python3 proxy-api.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
