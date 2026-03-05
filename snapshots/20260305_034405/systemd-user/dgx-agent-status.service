@@ -1,0 +1,13 @@
+[Unit]
+Description=Agent Live Status API
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /home/pmello/.openclaw/hub/agent-status-api.py 8094
+Restart=on-failure
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target
