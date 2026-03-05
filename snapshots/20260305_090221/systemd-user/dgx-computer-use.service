@@ -1,0 +1,14 @@
+[Unit]
+Description=Computer Use API Server
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pmello/.openclaw/workspace-main/tools/computer-use
+ExecStart=/home/linuxbrew/.linuxbrew/bin/python3 server.py
+Restart=on-failure
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target
