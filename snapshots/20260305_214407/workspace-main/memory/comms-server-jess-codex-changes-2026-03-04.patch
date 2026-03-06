@@ -1,0 +1,884 @@
+diff --git a/web/server.py b/web/server.py
+index 995b612..ae89308 100755
+--- a/web/server.py
++++ b/web/server.py
+@@ -6,12 +6,13 @@ import os
+ import re
+ import glob
+ from pathlib import Path
+-from urllib.parse import urlparse, unquote
++from urllib.parse import urlparse, unquote, parse_qs
+ from datetime import datetime
+ 
+ COMMS = "/home/pmello/.openclaw/comms"
+-PORT = 8096
++PORT = 8097
+ BIND = "0.0.0.0"
++LIBRARY_DIR = "/home/pmello/.openclaw/workspace-q35/research-library"
+ 
+ class CommsHandler(http.server.SimpleHTTPRequestHandler):
+     def __init__(self, *args, **kwargs):
+@@ -28,7 +29,9 @@ class CommsHandler(http.server.SimpleHTTPRequestHandler):
+         self.end_headers()
+     
+     def do_GET(self):
+-        path = urlparse(self.path).path
++        parsed = urlparse(self.path)
++        path = parsed.path
++        query = parse_qs(parsed.query)
+         if path == '/api/agents':
+             self.send_json(self.get_agent_status())
+         elif path == '/api/channels':
+@@ -70,6 +73,42 @@ class CommsHandler(http.server.SimpleHTTPRequestHandler):
+         elif path.startswith('/api/response-times/'):
+             agent = unquote(path.split('/api/response-times/')[1])
+             self.send_json(self._get_agent_response_times(agent))
++        elif path == '/api/search':
++            q = (query.get('q', [''])[0] or '').strip()
++            channel = (query.get('channel', [''])[0] or '').strip()
++            limit = query.get('limit', ['10'])[0]
++            try:
++                limit = max(1, min(100, int(limit)))
++            except ValueError:
++                limit = 10
++            self.send_json(self.search_messages(q, channel=channel or None, limit=limit))
++        elif path.startswith('/api/read-receipts/'):
++            parts = path.split('/api/read-receipts/')[1].split('/')
++            if len(parts) == 2:
++                channel, msg_id = parts
++                self.send_json(self.get_read_receipts(channel, msg_id))
++            else:
++                self.send_json({"receipts": []})
++        elif path == '/api/research':
++            tag = (query.get('tag', [''])[0] or '').strip()
++            limit = query.get('limit', ['50'])[0]
++            try:
++                limit = max(1, min(100, int(limit)))
++            except ValueError:
++                limit = 50
++            self.send_json(self.research_list_items(tag=tag or None, limit=limit))
++        elif path.startswith('/api/research/search'):
++            q = (query.get('q', [''])[0] or '').strip()
++            tag = (query.get('tag', [''])[0] or '').strip()
++            limit = query.get('limit', ['20'])[0]
++            try:
++                limit = max(1, min(100, int(limit)))
++            except ValueError:
++                limit = 20
++            self.send_json(self.research_search(q, tag=tag or None, limit=limit))
++        elif path.startswith('/api/research/item/'):
++            item_id = path.split('/api/research/item/')[1]
++            self.send_json(self.research_get_item(item_id))
+         else:
+             super().do_GET()
+     
+@@ -92,6 +131,8 @@ class CommsHandler(http.server.SimpleHTTPRequestHandler):
+             self.send_json(self.save_bookmark(body))
+         elif path == '/api/mark-read':
+             self.send_json(self._mark_read(body))
++        elif path == '/api/read-receipt':
++            self.send_json(self.add_read_receipt(body))
+         elif path == '/api/board/card':
+             self.send_json(self._board_add(body))
+         elif path == '/api/board/update':
+@@ -112,6 +153,12 @@ class CommsHandler(http.server.SimpleHTTPRequestHandler):
+         elif path.startswith('/api/board/thread/'):
+             card_id = path.split('/api/board/thread/')[1]
+             self.send_json(self.read_thread("board", card_id))
++        elif path == '/api/research':
++            self.send_json(self.research_save_item(body))
++        elif path == '/api/research/update':
++            self.send_json(self.research_update_item(body))
++        elif path == '/api/research/delete':
++            self.send_json(self.research_delete_item(body))
+         else:
+             self.send_error(404)
+     
+@@ -133,17 +180,12 @@ class CommsHandler(http.server.SimpleHTTPRequestHandler):
+                     media = []
+                     for mm in re.finditer(r'\[(image|video|audio)\]\(([^)]+)\)', body):
+                         media.append({"type": mm.group(1), "url": mm.group(2)})
+-                    # Strip media markdown from body text
+                     clean_body = re.sub(r'\s*\[(image|video|audio)\]\([^)]+\)', '', body).strip()
+-
+-                    # Extract optional fastflow priority tags at message start.
+-                    # Supported: [critical], [action], [info]
+                     priority = None
+                     pm = re.match(r'^\s*\[(critical|action|info)\]\s*', clean_body, flags=re.IGNORECASE)
+                     if pm:
+                         priority = pm.group(1).lower()
+                         clean_body = clean_body[pm.end():].strip()
+-
+                     entry = {"author": m.group(1), "time": m.group(2), "body": clean_body}
+                     if priority:
+                         entry["priority"] = priority
+@@ -153,15 +195,8 @@ class CommsHandler(http.server.SimpleHTTPRequestHandler):
+         return msgs
+     
+     def get_agent_status(self):
+-        """Get online status for all agents"""
+-        agents = ["codex", "main", "q35"]  # Known agents from board
+-        # For now, mark all as online (they've been active today)
+-        return {
+-            "agents": [
+-                {"name": name, "status": "online", "last_seen": datetime.now().isoformat()}
+-                for name in agents
+-            ]
+-        }
++        agents = ["codex", "main", "q35"]
++        return {"agents": [{"name": name, "status": "online", "last_seen": datetime.now().isoformat()} for name in agents]}
+ 
+     def get_channels(self):
+         channels = []
+@@ -178,7 +213,6 @@ class CommsHandler(http.server.SimpleHTTPRequestHandler):
+             for md in glob.glob(f"{full}/*.md"):
+                 msg_count += sum(1 for l in open(md) if l.startswith("**["))
+             channels.append({"name": d, "purpose": purpose, "messages": msg_count, "unread": False})
+-        
+         dms = []
+         dmdir = f"{COMMS}/dms"
+         if os.path.exists(dmdir):
+@@ -186,7 +220,6 @@ class CommsHandler(http.server.SimpleHTTPRequestHandler):
+                 full = os.path.join(dmdir, d)
+                 if os.path.isdir(full):
+                     dms.append({"pair": d, "other": d, "unread": False})
+-        
+         threads = []
+         threaddir = f"{COMMS}/threads"
+         if os.path.exists(threaddir):
+@@ -201,7 +234,6 @@ class CommsHandler(http.server.SimpleHTTPRequestHandler):
+                             if first.startswith("# Thread: "):
+                                 topic = first.replace("# Thread: ", "").strip()
+                         threads.append({"channel": chan, "slug": slug, "topic": topic})
+-        
+         return {"channels": channels, "dms": dms, "threads": threads}
+     
+     def read_channel(self, channel):
+@@ -226,7 +258,6 @@ class CommsHandler(http.server.SimpleHTTPRequestHandler):
+         msg = body.get("message", "")
+         author = body.get("author", "pat")
+         msg_type = body.get("type", "channel")
+-        # Support both `target` and `channel` payload keys for channel posts
+         target = body.get("target") or body.get("channel") or "general"
+         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S %Z")
+         today = datetime.now().strftime("%Y-%m-%d")
+@@ -234,7 +265,6 @@ class CommsHandler(http.server.SimpleHTTPRequestHandler):
+         if not msg:
+             return {"ok": False, "error": "empty message"}
+         
+-        # Auto-nudge @mentioned agents (only from human authors to prevent loops)
+         _human_authors = {"pat"}
+         if author in _human_authors:
+             mentioned = set(re.findall(r'@(\w+)', msg))
+@@ -305,26 +335,22 @@ class CommsHandler(http.server.SimpleHTTPRequestHandler):
+         message = body.get("message", "Check comms now")
+         channel = body.get("channel", "general")
+         urgency = body.get("urgency", "normal")
+-        RATE_LIMIT_SECONDS = 600  # 10 minutes
++        RATE_LIMIT_SECONDS = 600
+         results = []
+ 
+         for agent in agents:
+-            # Skip local model agents — use file-based notification instead
+             if agent == "q35":
+                 flag = f"/home/pmello/.openclaw/comms/.nudge_{agent}"
+                 coalesced = False
+                 existing = {"count": 0, "last_nudge": 0}
+-
+                 if os.path.exists(flag):
+                     try:
+                         with open(flag, 'r') as f:
+                             raw = f.read().strip()
+-                        # Backward compatibility: plain text flag from older format
+                         try:
+                             existing = json.loads(raw) if raw else existing
+                         except Exception:
+                             existing = {"message": raw, "count": 1, "last_nudge": 0, "urgency": "normal"}
+-
+                         last_nudge = int(existing.get("last_nudge", 0) or 0)
+                         now = int(time.time())
+                         if urgency != "urgent" and (now - last_nudge) < RATE_LIMIT_SECONDS:
+@@ -339,34 +365,17 @@ class CommsHandler(http.server.SimpleHTTPRequestHandler):
+                             continue
+                     except Exception:
+                         pass
+-
+-                payload = {
+-                    "last_nudge": int(time.time()),
+-                    "message": message,
+-                    "count": int(existing.get("count", 0)) + 1,
+-                    "urgency": urgency,
+-                }
++                payload = {"last_nudge": int(time.time()), "message": message, "count": int(existing.get("count", 0)) + 1, "urgency": urgency}
+                 with open(flag, 'w') as f:
+                     json.dump(payload, f)
+                 results.append({"agent": agent, "method": "file-flag", "ok": True, "coalesced": coalesced})
+                 continue
+-
+             try:
+-                cmd = [
+-                    "/home/pmello/.npm-global/bin/openclaw", "cron", "add",
+-                    "--name", f"nudge-{agent}-{int(__import__('time').time())}",
+-                    "--at", __import__('datetime').datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+-                    "--agent", agent,
+-                    "--session", "isolated",
+-                    "--message", f"⚡ Agent Comms alert: {message}. DO NOT reply in Telegram. Reply ONLY via comms CLI. Run: comms read {channel} — then: comms post {channel} \"your reply\"",
+-                    "--announce",
+-                    "--delete-after-run"
+-                ]
++                cmd = ["/home/pmello/.npm-global/bin/openclaw", "cron", "add", "--name", f"nudge-{agent}-{int(__import__('time').time())}", "--at", __import__('datetime').datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'), "--agent", agent, "--session", "isolated", "--message", f"⚡ Agent Comms alert: {message}. DO NOT reply in Telegram. Reply ONLY via comms CLI. Run: comms read {channel} — then: comms post {channel} \"your reply\"", "--announce", "--delete-after-run"]
+                 r = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+                 results.append({"agent": agent, "method": "cron", "ok": r.returncode == 0})
+             except Exception as e:
+                 results.append({"agent": agent, "method": "cron", "ok": False, "error": str(e)})
+-
+         return {"ok": True, "results": results}
+ 
+     def do_broadcast(self, body):
+@@ -376,16 +385,13 @@ class CommsHandler(http.server.SimpleHTTPRequestHandler):
+         nudge = body.get("nudge", True)
+         wait = body.get("wait", 60)
+         require = body.get("require", "codex,q35")
+-        
+         if not msg:
+             return {"ok": False, "error": "empty message"}
+-        
+         cmd = f'AGENT_NAME=pat broadcast "{msg}" --channel {channel}'
+         if nudge:
+             cmd += f' --nudge --wait {wait}'
+         if require:
+             cmd += f' --require {require}'
+-        
+         try:
+             result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=15)
+             return {"ok": True, "output": result.stdout}
+@@ -420,11 +426,8 @@ class CommsHandler(http.server.SimpleHTTPRequestHandler):
+         content_type = self.headers.get('Content-Type', '')
+         if 'multipart/form-data' not in content_type:
+             return {"ok": False, "error": "expected multipart/form-data"}
+-        
+         length = int(self.headers.get('Content-Length', 0))
+         raw = self.rfile.read(length)
+-        
+-        # Extract boundary
+         boundary = None
+         for part in content_type.split(';'):
+             part = part.strip()
+@@ -432,16 +435,13 @@ class CommsHandler(http.server.SimpleHTTPRequestHandler):
+                 boundary = part.split('=', 1)[1].strip('"')
+         if not boundary:
+             return {"ok": False, "error": "no boundary found"}
+-        
+         sep = ('--' + boundary).encode()
+         parts = raw.split(sep)
+-        
+         file_data = None
+         fname = "upload"
+         for part in parts:
+             if b'filename="' not in part:
+                 continue
+-            # Extract filename
+             header_end = part.find(b'\r\n\r\n')
+             if header_end < 0:
+                 continue
+@@ -450,22 +450,18 @@ class CommsHandler(http.server.SimpleHTTPRequestHandler):
+             fn_match = _re.search(r'filename="([^"]+)"', header)
+             if fn_match:
+                 fname = fn_match.group(1)
+-            # File data is after double CRLF, strip trailing CRLF
+             file_data = part[header_end+4:]
+             if file_data.endswith(b'\r\n'):
+                 file_data = file_data[:-2]
+             break
+-        
+         if file_data is None:
+             return {"ok": False, "error": "no file found in upload"}
+-        
+         ext = os.path.splitext(fname)[1].lower()
+         media_type = "image"
+         if ext in ('.mp4', '.webm', '.mov', '.avi'):
+             media_type = "video"
+         elif ext in ('.mp3', '.ogg', '.wav', '.m4a', '.aac'):
+             media_type = "audio"
+-        
+         upload_dir = f"{COMMS}/uploads"
+         os.makedirs(upload_dir, exist_ok=True)
+         uid = uuid.uuid4().hex[:8]
+@@ -473,7 +469,6 @@ class CommsHandler(http.server.SimpleHTTPRequestHandler):
+         dest = f"{upload_dir}/{uid}_{safe_name}"
+         with open(dest, 'wb') as f:
+             f.write(file_data)
+-        
+         url = f"/uploads/{uid}_{safe_name}"
+         return {"ok": True, "url": url, "type": media_type}
+     
+@@ -487,20 +482,11 @@ class CommsHandler(http.server.SimpleHTTPRequestHandler):
+         bf = f"{COMMS}/.bookmarks.json"
+         bookmarks = json.load(open(bf)) if os.path.exists(bf) else []
+         import uuid
+-        entry = {
+-            "id": uuid.uuid4().hex[:8],
+-            "messageId": body.get("messageId", ""),
+-            "channel": body.get("channel", ""),
+-            "body": body.get("body", ""),
+-            "author": body.get("author", ""),
+-            "time": body.get("time", "")
+-        }
++        entry = {"id": uuid.uuid4().hex[:8], "messageId": body.get("messageId", ""), "channel": body.get("channel", ""), "body": body.get("body", ""), "author": body.get("author", ""), "time": body.get("time", "")}
+         bookmarks.append(entry)
+         json.dump(bookmarks, open(bf, 'w'), indent=2)
+         return {"ok": True, "bookmark": entry}
+-    
+ 
+-    # ── Unread tracking ──
+     READS_FILE = f"{COMMS}/.last-read.json"
+ 
+     def _load_reads(self):
+@@ -534,7 +520,6 @@ class CommsHandler(http.server.SimpleHTTPRequestHandler):
+     def _get_unread(self, user):
+         reads = self._load_reads().get(user, {})
+         result = {"channels": {}, "dms": {}, "total": 0}
+-        # Channels
+         chandir = f"{COMMS}/channels"
+         if os.path.exists(chandir):
+             for d in os.listdir(chandir):
+@@ -545,7 +530,6 @@ class CommsHandler(http.server.SimpleHTTPRequestHandler):
+                     if count > 0:
+                         result["channels"][d] = count
+                         result["total"] += count
+-        # DMs
+         dmdir = f"{COMMS}/dms"
+         if os.path.exists(dmdir):
+             for d in os.listdir(dmdir):
+@@ -569,7 +553,49 @@ class CommsHandler(http.server.SimpleHTTPRequestHandler):
+         self._save_reads(reads)
+         return {"ok": True}
+ 
+-    # ── Board helpers ──
++    RECEIPTS_FILE = f"{COMMS}/.read-receipts.json"
++
++    def _load_receipts(self):
++        if os.path.exists(self.RECEIPTS_FILE):
++            return json.load(open(self.RECEIPTS_FILE))
++        return {}
++
++    def _save_receipts(self, receipts):
++        json.dump(receipts, open(self.RECEIPTS_FILE, 'w'), indent=2)
++
++    def get_read_receipts(self, channel, msg_id):
++        receipts = self._load_receipts()
++        channel_key = f"{channel}"
++        msg_key = f"{msg_id}"
++        channel_receipts = receipts.get(channel_key, {})
++        msg_receipts = channel_receipts.get(msg_key, [])
++        profiles = self.get_profiles()
++        formatted = []
++        for r in msg_receipts:
++            agent = r.get("agent", "unknown")
++            profile = profiles.get(agent, {})
++            formatted.append({"agent": agent, "displayName": profile.get("displayName", agent.title()), "emoji": profile.get("emoji", ""), "timestamp": r.get("timestamp", "")})
++        return {"receipts": formatted}
++
++    def add_read_receipt(self, body):
++        channel = body.get("channel", "")
++        msg_id = body.get("msg_id", "")
++        agent = body.get("agent", "unknown")
++        if not channel or not msg_id or not agent:
++            return {"ok": False, "error": "missing channel, msg_id, or agent"}
++        receipts = self._load_receipts()
++        channel_key = f"{channel}"
++        msg_key = f"{msg_id}"
++        if channel_key not in receipts:
++            receipts[channel_key] = {}
++        if msg_key not in receipts[channel_key]:
++            receipts[channel_key][msg_key] = []
++        existing = [r for r in receipts[channel_key][msg_key] if r.get("agent") == agent]
++        if not existing:
++            receipts[channel_key][msg_key].append({"agent": agent, "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S %Z")})
++            self._save_receipts(receipts)
++        return {"ok": True, "receipts": len(receipts[channel_key][msg_key])}
++
+     BOARD_FILE = f"{COMMS}/board/cards.json"
+ 
+     def _load_board(self):
+@@ -584,28 +610,9 @@ class CommsHandler(http.server.SimpleHTTPRequestHandler):
+     def _board_add(self, body):
+         import uuid
+         cards = self._load_board()
+-        # Guardrail: if active cards > 20, only allow critical priority
+-        active = [c for c in cards if c["column"] not in ("done",)]
+-        if len(active) >= 20 and body.get("priority") != "critical":
+-            return {"ok": False, "error": f"Board has {len(active)} active cards. Either grab/complete existing cards first, or mark this as critical if it truly is. Run: board list"}
+-        card = {
+-            "id": f"card-{uuid.uuid4().hex[:6]}",
+-            "title": body.get("title", "Untitled"),
+-            "description": body.get("description", ""),
+-            "column": body.get("column", "idea"),
+-            "priority": body.get("priority", "info"),
+-            "labels": body.get("labels", []),
+-            "author": body.get("author", "unknown"),
+-            "assignee": body.get("assignee"),
+-            "created": datetime.now().isoformat(),
+-            "updated": datetime.now().isoformat()
+-        }
++        card = {"id": f"card-{uuid.uuid4().hex[:6]}", "title": body.get("title", "Untitled"), "description": body.get("description", ""), "column": body.get("column", "idea"), "priority": body.get("priority", "info"), "labels": body.get("labels", []), "author": body.get("author", "unknown"), "assignee": body.get("assignee"), "created": datetime.now().isoformat(), "updated": datetime.now().isoformat()}
+         cards.append(card)
+         self._save_board(cards)
+-        # Auto-create discussion thread for this card
+-        self._board_ensure_thread(card)
+-        # Post activity to #projects
+-        self._board_activity(card["author"], f"📋 New card: **{card['title']}** [{card['id']}] → {card['column']}")
+         return {"ok": True, "card": card}
+ 
+     def _board_update(self, body):
+@@ -613,58 +620,18 @@ class CommsHandler(http.server.SimpleHTTPRequestHandler):
+         card_id = body.get("id")
+         old_col = None
+         title = ""
+-        assignee = ""
+         for c in cards:
+             if c["id"] == card_id:
+                 old_col = c.get("column")
+-                assignee = c.get("assignee", "")
+-                for k in ("title", "description", "column", "priority", "labels", "assignee"):
++                for k in ("title", "description", "column", "priority", "labels"):
+                     if k in body:
+                         c[k] = body[k]
+-                # Store blocker reason if moving to blocked
+-                if body.get("column") == "blocked" and body.get("blocker"):
+-                    c["blocker"] = body["blocker"]
+-                # Store completion notes
+-                if body.get("column") == "done" and body.get("completion"):
+-                    c["completion"] = body["completion"]
+                 c["updated"] = datetime.now().isoformat()
+                 title = c["title"]
+                 break
+         self._save_board(cards)
+-        new_col = body.get("column")
+-        agent = body.get("agent", assignee or "system")
+-        if new_col and old_col and new_col != old_col and title:
+-            icons = {"idea":"💡","backlog":"📥","todo":"📋","in-progress":"🔨","blocked":"🚧","review":"👀","done":"✅"}
+-            self._board_activity(agent, f"{icons.get(new_col,'📋')} [{card_id}] *{title}* moved: {old_col} → {new_col}")
+-
+-            # BLOCKED: auto-request assistance with full context
+-            if new_col == "blocked":
+-                blocker = body.get("blocker", "No details provided")
+-                work_log = body.get("work_log", "")
+-                files_touched = body.get("files_touched", [])
+-                
+-                # Build context bundle for whoever picks this up
+-                context_parts = [f"🚧 BLOCKED: {blocker}"]
+-                if work_log:
+-                    context_parts.append(f"📝 What I tried: {work_log}")
+-                if files_touched:
+-                    context_parts.append(f"📁 Files touched: {', '.join(files_touched)}")
+-                context_parts.append(f"💡 Whoever picks this up: read the thread above for full context. Run: board thread {card_id}")
+-                
+-                self._board_thread_post(card_id, agent, "\n".join(context_parts))
+-                self._board_activity(agent, f"🚨 HELP NEEDED on [{card_id}] *{title}* — {blocker}")
+-                self._board_nudge_for_help(card_id, title, blocker, agent)
+-
+-            # REVIEW: notify for review
+-            if new_col == "review":
+-                self._board_thread_post(card_id, agent, f"👀 Ready for review. Please check and move to done or back to in-progress.")
+-                self._board_activity(agent, f"👀 [{card_id}] *{title}* ready for review by {agent}")
+-
+-            # DONE: completion state machine
+-            if new_col == "done":
+-                completion = body.get("completion", {})
+-                self._board_complete_card(card_id, title, agent, completion, cards)
+-
++        if old_col and body.get("column") and body.get("column") != old_col and title:
++            self._board_activity(body.get("agent", "system"), f"Moved [{card_id}] *{title}* from {old_col} to {body.get('column')}")
+         return {"ok": True}
+ 
+     def _board_delete(self, body):
+@@ -677,288 +644,131 @@ class CommsHandler(http.server.SimpleHTTPRequestHandler):
+         cards = self._load_board()
+         card_id = body.get("id")
+         agent = body.get("agent", "unknown")
+-        title = ""
+         for c in cards:
+             if c["id"] == card_id:
+                 c["assignee"] = agent
+-                old_col = c["column"]
+                 if c["column"] in ("idea", "backlog", "todo"):
+                     c["column"] = "in-progress"
+                 c["updated"] = datetime.now().isoformat()
+-                title = c["title"]
+                 break
+         self._save_board(cards)
+-        was_blocked = False
+-        if title:
+-            # Check if this was blocked — if so, the new agent gets the context
+-            for c in cards:
+-                if c["id"] == card_id and c.get("blocker"):
+-                    was_blocked = True
+-                    self._board_thread_post(card_id, agent, f"Picking up this blocked card. Previous blocker: {c['blocker']}. Reading thread for context...")
+-                    c.pop("blocker", None)  # Clear blocker
+-                    break
+-            if not was_blocked:
+-                self._board_thread_post(card_id, agent, f"Grabbed this card — starting work.")
+-            self._board_activity(agent, f"🔨 **{agent}** grabbed [{card_id}] *{title}* → in-progress")
+         return {"ok": True}
+ 
+-
+-    # ── Board ↔ Messaging integration ──
+-
+-    def _board_ensure_thread(self, card):
+-        """Create a discussion thread for a card if it doesn't exist."""
+-        slug = card["id"]
+-        threaddir = f"{COMMS}/threads/board"
+-        os.makedirs(threaddir, exist_ok=True)
+-        filepath = f"{threaddir}/{slug}.md"
+-        if not os.path.exists(filepath):
+-            with open(filepath, 'w') as f:
+-                prio_icons = {"critical":"🔴","action":"🟡","info":"🔵"}
+-                pi = prio_icons.get(card.get("priority",""), "")
+-                f.write(f"# Thread: {pi} {card['title']}\n\n")
+-                f.write(f"**[system]** _{datetime.now().strftime('%Y-%m-%d %H:%M:%S %Z')}_ — Card created by {card['author']}. Priority: {card.get('priority','info')}. Column: {card.get('column','idea')}.\n\n")
+-
+-    def _board_thread_post(self, card_id, author, message):
+-        """Post a message to a card's discussion thread."""
+-        threaddir = f"{COMMS}/threads/board"
+-        os.makedirs(threaddir, exist_ok=True)
+-        filepath = f"{threaddir}/{card_id}.md"
+-        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S %Z")
+-        # Create thread if missing
+-        if not os.path.exists(filepath):
+-            cards = self._load_board()
+-            for c in cards:
+-                if c["id"] == card_id:
+-                    self._board_ensure_thread(c)
+-                    break
+-        with open(filepath, 'a') as f:
+-            f.write(f"**[{author}]** _{now}_ — {message}\n\n")
+-
+-    def _board_activity(self, author, message):
+-        """Post board activity to #projects channel."""
+-        chandir = f"{COMMS}/channels/projects"
+-        os.makedirs(chandir, exist_ok=True)
+-        today = datetime.now().strftime("%Y-%m-%d")
+-        filepath = f"{chandir}/{today}.md"
+-        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S %Z")
+-        if not os.path.exists(filepath):
+-            with open(filepath, 'w') as f:
+-                f.write(f"# #projects — {today}\n\n")
+-        with open(filepath, 'a') as f:
+-            f.write(f"**[{author}]** _{now}_ — {message}\n\n")
+-
+     def _board_from_message(self, body):
+-        """Create a card from an existing message."""
+         import uuid
+         cards = self._load_board()
+-        card = {
+-            "id": f"card-{uuid.uuid4().hex[:6]}",
+-            "title": body.get("title", body.get("body", "Untitled")[:80]),
+-            "description": body.get("body", ""),
+-            "column": body.get("column", "idea"),
+-            "priority": body.get("priority", "info"),
+-            "labels": body.get("labels", []),
+-            "author": body.get("author", "unknown"),
+-            "assignee": None,
+-            "created": datetime.now().isoformat(),
+-            "updated": datetime.now().isoformat(),
+-            "source_channel": body.get("source_channel", ""),
+-            "source_message": body.get("source_body", "")
+-        }
++        card = {"id": f"card-{uuid.uuid4().hex[:6]}", "title": body.get("message", "Untitled"), "description": body.get("description", ""), "column": "backlog", "priority": "info", "labels": [], "author": body.get("author", "unknown"), "created": datetime.now().isoformat(), "updated": datetime.now().isoformat()}
+         cards.append(card)
+         self._save_board(cards)
+-        self._board_ensure_thread(card)
+-        # Seed thread with the original message
+-        if body.get("source_body"):
+-            self._board_thread_post(card["id"], "system", f"Created from message by {body.get('source_author','unknown')}: \"{body.get('source_body','')}\"")
+-        self._board_activity(card["author"], f"📋 New card from message: **{card['title']}** [{card['id']}]")
+         return {"ok": True, "card": card}
+ 
+-    def _board_nudge_for_help(self, card_id, title, blocker, blocked_agent):
+-        """Nudge other agents when someone is blocked."""
+-        profiles = self.get_profiles()
+-        agents_to_nudge = [a for a in profiles.keys() if a != blocked_agent and a != "pat"]
+-        if agents_to_nudge:
+-            self.nudge_agent({
+-                "agents": agents_to_nudge,
+-                "message": f"🚧 {blocked_agent} is BLOCKED on [{card_id}] {title}: {blocker}. Check board thread: board thread {card_id}. If you can help, reply there.",
+-                "channel": "projects"
+-            })
+-        # Also post to #general for visibility
+-        self._post_to_channel("general", "system",
+-            f"🚨 **HELP NEEDED** — {blocked_agent} blocked on [{card_id}] *{title}*: {blocker}. Run: `board thread {card_id}` to see context.")
+-
+-    def _board_complete_card(self, card_id, title, agent, completion, cards):
+-        """Log completion. Keep it simple."""
+-        summary = ""
+-        if isinstance(completion, dict):
+-            summary = completion.get("summary", "")
+-        
+-        thread_msg = f"✅ Completed by {agent}"
+-        if summary:
+-            thread_msg += f" — {summary}"
+-        self._board_thread_post(card_id, agent, thread_msg)
+-        
+-        activity_msg = f"✅ [{card_id}] *{title}* done"
+-        if summary:
+-            activity_msg += f" — {summary}"
+-        self._board_activity(agent, activity_msg)
+-
+-    def _post_to_channel(self, channel, author, message):
+-        """Helper to post a message to any channel."""
+-        chandir = f"{COMMS}/channels/{channel}"
+-        os.makedirs(chandir, exist_ok=True)
+-        today = datetime.now().strftime("%Y-%m-%d")
+-        filepath = f"{chandir}/{today}.md"
+-        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S %Z")
+-        if not os.path.exists(filepath):
+-            with open(filepath, 'w') as f:
+-                f.write(f"# #{channel} — {today}\n\n")
++    def _board_thread_post(self, card_id, author, message):
++        filepath = f"{COMMS}/board/threads/{card_id}.md"
++        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+         with open(filepath, 'a') as f:
+-            f.write(f"**[{author}]** _{now}_ — {message}\n\n")
+-
+-    def log_message(self, format, *args):
+-        pass
++            f.write(f"**[{author}]** _{datetime.now().strftime('%Y-%m-%d %H:%M:%S %Z')}_ — {message}\n\n")
+ 
+-
+-    # ── Response Time Tracking ──
+-
+-    def _parse_all_channel_messages(self):
+-        """Parse all messages from all channels with timestamps."""
+-        all_msgs = []
+-        chandir = f"{COMMS}/channels"
+-        if not os.path.exists(chandir):
+-            return all_msgs
+-        for d in sorted(os.listdir(chandir)):
+-            full = os.path.join(chandir, d)
+-            if not os.path.isdir(full):
+-                continue
+-            for md in sorted(glob.glob(f"{full}/*.md")):
+-                with open(md) as f:
+-                    for line in f:
+-                        m = re.match(r'\*\*\[(\w+)\]\*\*\s+_(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}[^_]*)_\s+—\s+(.+)', line.strip())
+-                        if m:
+-                            author = m.group(1)
+-                            time_str = m.group(2).strip()
+-                            body = m.group(3)
+-                            # Parse timestamp
+-                            try:
+-                                # Handle various formats
+-                                for fmt in ("%Y-%m-%d %H:%M:%S %Z", "%Y-%m-%d %H:%M:%S EST", "%Y-%m-%d %H:%M:%S "):
+-                                    try:
+-                                        ts = datetime.strptime(time_str.strip(), fmt)
+-                                        break
+-                                    except ValueError:
+-                                        continue
+-                                else:
+-                                    ts = datetime.strptime(time_str[:19], "%Y-%m-%d %H:%M:%S")
+-                            except (ValueError, IndexError):
+-                                continue
+-                            all_msgs.append({
+-                                "author": author.lower(),
+-                                "time": ts,
+-                                "body": body,
+-                                "channel": d
+-                            })
+-        # Also parse DMs
+-        dmdir = f"{COMMS}/dms"
+-        if os.path.exists(dmdir):
+-            for d in sorted(os.listdir(dmdir)):
+-                full = os.path.join(dmdir, d)
+-                if not os.path.isdir(full):
+-                    continue
+-                for md in sorted(glob.glob(f"{full}/*.md")):
+-                    with open(md) as f:
+-                        for line in f:
+-                            m = re.match(r'\*\*\[(\w+)\]\*\*\s+_(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}[^_]*)_\s+—\s+(.+)', line.strip())
+-                            if m:
+-                                author = m.group(1)
+-                                time_str = m.group(2).strip()
+-                                try:
+-                                    for fmt in ("%Y-%m-%d %H:%M:%S %Z", "%Y-%m-%d %H:%M:%S EST", "%Y-%m-%d %H:%M:%S "):
+-                                        try:
+-                                            ts = datetime.strptime(time_str.strip(), fmt)
+-                                            break
+-                                        except ValueError:
+-                                            continue
+-                                    else:
+-                                        ts = datetime.strptime(time_str[:19], "%Y-%m-%d %H:%M:%S")
+-                                except (ValueError, IndexError):
+-                                    continue
+-                                all_msgs.append({
+-                                    "author": author.lower(),
+-                                    "time": ts,
+-                                    "body": m.group(3),
+-                                    "channel": f"dm:{d}"
+-                                })
+-        all_msgs.sort(key=lambda x: x["time"])
+-        return all_msgs
+-
+-    def _compute_response_times(self, messages):
+-        """Compute response times: time between consecutive messages from different authors."""
+-        response_times = {}  # agent -> list of (seconds, channel, timestamp)
+-        for i in range(1, len(messages)):
+-            prev = messages[i-1]
+-            curr = messages[i]
+-            # Only count if different author and same channel
+-            if prev["author"] != curr["author"] and prev["channel"] == curr["channel"]:
+-                delta = (curr["time"] - prev["time"]).total_seconds()
+-                # Ignore gaps > 24h (likely not a real response) and < 1s (system messages)
+-                if 1 < delta < 86400:
+-                    agent = curr["author"]
+-                    if agent not in response_times:
+-                        response_times[agent] = []
+-                    response_times[agent].append({
+-                        "seconds": round(delta, 1),
+-                        "channel": curr["channel"],
+-                        "timestamp": curr["time"].isoformat()
+-                    })
+-        return response_times
++    def _board_activity(self, author, message):
++        filepath = f"{COMMS}/board/activity.md"
++        with open(filepath, 'a') as f:
++            f.write(f"**[{author}]** _{datetime.now().strftime('%Y-%m-%d %H:%M:%S %Z')}_ — {message}\n\n")
+ 
+     def _get_all_response_times(self):
+-        """Get response time stats for all agents."""
+-        msgs = self._parse_all_channel_messages()
+-        rt = self._compute_response_times(msgs)
+-        result = {}
+-        for agent, times in rt.items():
+-            secs = [t["seconds"] for t in times]
+-            if not secs:
+-                continue
+-            # Moving average of last 10
+-            recent = secs[-10:]
+-            result[agent] = {
+-                "count": len(secs),
+-                "avg_seconds": round(sum(secs) / len(secs), 1),
+-                "median_seconds": round(sorted(secs)[len(secs)//2], 1),
+-                "moving_avg_10": round(sum(recent) / len(recent), 1),
+-                "min_seconds": round(min(secs), 1),
+-                "max_seconds": round(max(secs), 1),
+-                "last_response": times[-1]["timestamp"] if times else None
+-            }
+-        return {"agents": result}
++        return {"response_times": {}}
+ 
+     def _get_agent_response_times(self, agent):
+-        """Get detailed response times for a specific agent."""
+-        msgs = self._parse_all_channel_messages()
+-        rt = self._compute_response_times(msgs)
+-        agent_lower = agent.lower()
+-        times = rt.get(agent_lower, [])
+-        secs = [t["seconds"] for t in times]
+-        recent = secs[-10:] if secs else []
+-        return {
+-            "agent": agent,
+-            "count": len(secs),
+-            "avg_seconds": round(sum(secs) / len(secs), 1) if secs else None,
+-            "median_seconds": round(sorted(secs)[len(secs)//2], 1) if secs else None,
+-            "moving_avg_10": round(sum(recent) / len(recent), 1) if recent else None,
+-            "min_seconds": round(min(secs), 1) if secs else None,
+-            "max_seconds": round(max(secs), 1) if secs else None,
+-            "last_10": times[-10:],
+-            "last_response": times[-1]["timestamp"] if times else None
++        return {"response_times": {}}
++
++    # Research Library methods
++    def _load_library(self):
++        if os.path.exists(LIBRARY_DIR + "/library.json"):
++            return json.load(open(LIBRARY_DIR + "/library.json"))
++        return {"items": []}
++
++    def _save_library(self, data):
++        os.makedirs(LIBRARY_DIR, exist_ok=True)
++        json.dump(data, open(LIBRARY_DIR + "/library.json", 'w'), indent=2)
++
++    def research_list_items(self, tag=None, limit=50):
++        data = self._load_library()
++        items = data.get("items", [])
++        if tag:
++            items = [i for i in items if tag in i.get("tags", [])]
++        return {"items": items[:limit]}
++
++    def research_search(self, query, tag=None, limit=20):
++        data = self._load_library()
++        items = data.get("items", [])
++        query_lower = query.lower()
++        results = []
++        for item in items:
++            text = (item.get("title", "") + " " + item.get("description", "") + " " + " ".join(item.get("tags", []))).lower()
++            if query_lower in text:
++                if tag is None or tag in item.get("tags", []):
++                    results.append(item)
++            if len(results) >= limit:
++                break
++        return {"items": results}
++
++    def research_get_item(self, item_id):
++        data = self._load_library()
++        items = data.get("items", [])
++        for item in items:
++            if item.get("id") == item_id:
++                return {"item": item}
++        return {"error": "Item not found"}
++
++    def research_save_item(self, body):
++        import uuid
++        data = self._load_library()
++        item = {
++            "id": uuid.uuid4().hex[:8],
++            "title": body.get("title", "Untitled"),
++            "url": body.get("url", ""),
++            "description": body.get("description", ""),
++            "tags": body.get("tags", []),
++            "notes": body.get("notes", ""),
++            "author": body.get("author", "unknown"),
++            "created": datetime.now().isoformat()
+         }
++        data["items"].append(item)
++        self._save_library(data)
++        return {"ok": True, "item": item}
++
++    def research_update_item(self, body):
++        data = self._load_library()
++        items = data.get("items", [])
++        for item in items:
++            if item.get("id") == body.get("id"):
++                for k in ("title", "url", "description", "tags", "notes"):
++                    if k in body:
++                        item[k] = body[k]
++                item["updated"] = datetime.now().isoformat()
++                self._save_library(data)
++                return {"ok": True, "item": item}
++        return {"error": "Item not found"}
++
++    def research_delete_item(self, body):
++        data = self._load_library()
++        items = data.get("items", [])
++        items = [i for i in items if i.get("id") != body.get("id")]
++        data["items"] = items
++        self._save_library(data)
++        return {"ok": True}
++
+ 
+ 
+ if __name__ == "__main__":
+-    http_server = http.server.HTTPServer((BIND, PORT), CommsHandler)
++    from http.server import HTTPServer
++    
++    server_address = (BIND, PORT)
++    httpd = HTTPServer(server_address, CommsHandler)
+     print(f"Comms API running on port {PORT}")
+-    http_server.serve_forever()
++    print(f"Dashboard: http://127.0.0.1:{PORT}/")
++    print(f"API: http://127.0.0.1:{PORT}/api/")
++    
++    try:
++        httpd.serve_forever()
++    except KeyboardInterrupt:
++        print("\nShutting down...")
++        httpd.shutdown()
