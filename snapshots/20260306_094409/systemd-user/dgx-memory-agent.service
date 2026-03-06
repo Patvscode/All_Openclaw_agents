@@ -1,0 +1,14 @@
+[Unit]
+Description=Compound V2 Memory Agent (port 8098)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pmello/.openclaw/workspace-main/tools/compound-v2
+ExecStart=/usr/bin/python3 memory_agent.py
+Restart=on-failure
+RestartSec=5
+Environment=MEMORY_AGENT_PORT=8101
+
+[Install]
+WantedBy=default.target
