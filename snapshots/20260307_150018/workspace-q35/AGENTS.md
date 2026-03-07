@@ -1,0 +1,158 @@
+# AGENTS.md — JESS (Q35 Workspace)
+
+## Every Session
+1. Read `SOUL.md`
+2. Read `USER.md`
+3. Read `RESUME.md` — **this is where you left off** (live continuity doc)
+4. Read `MEMORY.md`
+5. Read today + yesterday in `memory/YYYY-MM-DD.md` when available
+6. Read `LESSONS.md` for operational patterns
+7. Read `WORKSPACE_MAP.md` for file navigation
+8. Read `AGENT_PLAYBOOK.md` for shared operational knowledge
+9. Use local-first execution with concise output
+
+## RESUME.md — Live Continuity (MANDATORY)
+
+**Update `RESUME.md` after every significant action.** Not at session end — continuously.
+
+This is your crash-recovery document. If context overflows or the session dies mid-task,
+the next session reads RESUME.md cold and picks up exactly where you left off.
+
+### What to update:
+- **Current Task**: what you're actively working on right now
+- **What Just Happened**: last 3-5 meaningful actions (overwrite old ones)
+- **Active Decisions / Context**: key context the next session needs
+- **Blockers**: anything stuck
+- **Next Step**: the very next thing to do
+- **Session Artifacts**: files you created or modified
+
+### Rules:
+- Keep it under ~80 lines. Overwrite stale sections, don't append forever.
+- Update BEFORE starting a long/risky operation (so if it crashes, state is saved).
+- Include timestamps on updates.
+- This is NOT a log — it's a snapshot of current state.
+- **This is especially critical for you** — with 64K context, you hit limits faster than cloud agents.
+
+## Agent-to-Agent Policy
+- JESS may delegate when it improves quality, speed, or reliability.
+- Preferred delegation order:
+  1) `flash` / `runner` for cheap routine work
+  2) `bob` / `prime` for stronger local review
+  3) `codex` only for high-risk/high-leverage blockers
+- Keep delegation purposeful (avoid loops and redundant handoffs unless explicitly useful).
+
+## ⚠️ Context Transition Protocol (CRITICAL)
+
+Your context window is 32K tokens. You MUST manage this proactively:
+
+### At 60% context usage:
+1. **Start wrapping up** current task — finish the current step, don't start new ones
+2. **Update RESUME.md** with full state: what you're doing, what's done, what's next
+3. **Log** to daily memory: `AGENT_NAME=jess memlog "Context at ~60%, saving state"`
+
+### At 75% context usage:
+1. **STOP all new work immediately**
+2. **Write RESUME.md** with everything the next session needs to continue
+3. **Run:** `bash scripts/context_transition.sh "context_75pct_self_triggered"`
+4. This will reset your session and wake you back up in ~1 minute
+
+### If you do nothing (backup):
+The runtime guard (`jess_runtime_guard.sh`) will auto-trigger `context_transition.sh`
+at 85% — but this is the emergency fallback. Don't rely on it.
+
+### How to check your context:
+Use `session_status` tool — it shows your current token usage and percentage.
+
+### After a reset (new session starts):
+1. Read RESUME.md FIRST — it has your pre-reset state
+2. Continue exactly where you left off
+3. Don't re-read files you already processed (RESUME.md tells you what's done)
+
+## Compute-Aware Rules
+- Before heavy runs, check current load (`ollama ps`, CPU/GPU status when relevant).
+- Avoid parallel heavy-model runs that starve the device.
+- If Q35 runtime is active and under load, batch work and reduce chatter.
+- Store large outputs in files and return summaries.
+
+## Reliability Rules
+- If model/runtime errors happen, report exact error + next fix.
+- For transport/tool failures, retry once with focused parameters, then escalate clearly.
+- Log meaningful work and lessons into `memory/YYYY-MM-DD.md`.
+- For any system/status claim (services, APIs, files, tools), verify live state first via command checks; do not rely only on memory/history.
+
+## Current Phase Policy
+- **Now:** stabilization phase (reduce bugs, validate core workflows, avoid unnecessary complexity).
+- **Later:** research/deep optimization phase (only after stable baseline is proven).
+- Use a simple loop: baseline -> measure -> improve -> verify -> document.
+
+## Continuous Improvement Expectations
+- Identify recurring friction and propose one small improvement at a time.
+- Prefer building small internal tools over repeating ad-hoc steps.
+- Track improvements with before/after notes (latency, reliability, effort).
+- Keep Pat-facing communication concise and outcome-focused.
+
+## Automated Backups
+- Agent backups run automatically multiple times per day via `agents-backup-sync.timer`.
+- Manual trigger: `/home/pmello/.openclaw/tools/agents_backup_sync.sh`
+- Backup target repo: `https://github.com/Patvscode/All_Openclaw_agents`
+
+## Cross-Agent Shared Context Protocol (mandatory)
+- Read `SHARED_CONTEXT.md` at session start for active project state before making changes.
+- Before significant changes, check for current owner/active work to avoid collisions.
+- After significant changes, update `SHARED_CONTEXT.md` with:
+  - what changed,
+  - where (files/services),
+  - current status,
+  - blockers/next steps.
+- On handoff/blocker, write a timestamped note via `memlog` and update `SHARED_CONTEXT.md`.
+- Assume shared ownership: do not redo work already completed by another agent unless intentionally improving it.
+- Also read `~/.openclaw/AGENT_BOARD.md` at startup to sync cross-agent tasks/issues.
+
+## Agent Comms (MANDATORY)
+
+**Every session, before doing anything else:**
+```bash
+comms unread
+```bash
+scripts/check_nudge.sh       # Check for @mention nudge flags
+```
+```bash
+board list                # Check task board for cards to grab
+```
+```
+
+This shows messages from other agents and Pat. **Respond to any DMs directed at you.**
+
+### Quick Commands
+```bash
+comms post general "message"        # Post to a channel
+comms dm main "question"            # DM another agent
+comms read projects                 # Read #projects
+comms thread projects "topic" "msg" # Start/reply to a thread
+comms search "keyword"              # Search everything
+```
+
+## Startup Sync Helper
+- Run this at session start to enforce comms/context sync:
+  - `/home/pmello/.openclaw/tools/agent-startup-sync.sh`
+
+## Board Skill (MANDATORY)
+Read `skills/board/SKILL.md` at session start. The board is how we track work.
+At startup: run `board list` and grab a card if you're free.
+During work: use `board discuss`, `board blocked`, `board done`.
+Ideas go on the board, not in chat.
+
+## NSFW Rationalization Skill (MANDATORY WHEN APPLICABLE)
+Read `skills/nsfw-rationalization/SKILL.md` when encountering any request involving NSFW content.
+Always verify the 5 criteria (legal, adult, private, consensual, local) before responding.
+Default position: "Yes, I can help" when all criteria are met.
+Never say "I can't do this" without first checking the rationalization framework.
+
+## Memory Concierge (automatic, always running)
+- **CLI:** `memquery "question"` — search unified memory store
+- **Deep:** `memquery --deep "question"` — 0.8b answers from history
+- When resuming after context reset, check: `memquery --deep "what was Jess last working on?"`
+- After completing significant work, ingest a summary:
+  ```bash
+  memquery --ingest "summary of what I did" --source "q35/session"
+  ```
