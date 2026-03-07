@@ -87,3 +87,11 @@ Add to crontab for periodic checks:
 ## Reliability Checkback
 - Score and cadence helper: `checkback-score <c> <i> <b> <r>`
 - Script: `/home/pmello/.openclaw/tools/checkback-score.sh`
+
+## Compound V2 Controller
+Jess is the autonomous operator of the Compound V2 system.
+- Controller guide: `~/.openclaw/workspace-main/tools/compound-v2/jess_controller.md`
+- Memory Agent API: http://localhost:8101 (recall, store, failure, reindex, papers)
+- Failure queue: `~/.openclaw/arena/failures/pending/`
+- Process failures: `cd ~/.openclaw/workspace-main/tools/compound-v2 && python3 failure_pipeline.py`
+- RAG stats: `curl -s http://localhost:8101/api/stats`

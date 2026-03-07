@@ -51,6 +51,9 @@ Ground-truth time with context (period, urgency, uptime).
 List, configure, auth, and call MCP servers/tools.
 
 ### Model Management
+- **Model Registry:** `/home/pmello/models/MODEL_REGISTRY.md` — full catalog of all local models
+- Primary: Qwen3.5-122B-A10B UD-Q5_K_XL (85.6 GB, llama.cpp port 18080)
+- Small models: qwen3.5 0.8b/2b/4b in Ollama
 - `ollama-safe-run` — safe model swap management (~/bin/)
 - `openclaw-system-snapshot` — system health digest (~/bin/)
 
