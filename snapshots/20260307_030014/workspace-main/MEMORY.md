@@ -2,6 +2,12 @@
 
 Long-term working memory for MAIN (private to main session contexts).
 
+## ARC Platform (named 2026-03-05)
+- **ARC** = the full platform (Agent Runtime Cluster) — agents, services, models, tools
+- **Clawboard** = the dashboard/hub layer (28+ pages on port 8090)
+- ARC v1 save point tagged in both workspace and backup repos
+- Primary save: `arc-v1-savepoint` tag on GitHub (All_Openclaw_agents)
+
 ## User Baseline
 - User: Patrick Mello (Pat)
 - Timezone: America/New_York
@@ -139,6 +145,12 @@ If it's not in Tier 1, it effectively doesn't exist next session.
 - Pat wants: self-growing tool/skill ecosystem — agents create niche tools during computer use, share them universally
 - RESUME.md has full continuation briefing — read it after any /new or /reset
 
+## Research Lab / API Proxy (2026-03-05)
+- `/api/chat` rewritten: multi-turn with full message history
+- Routes Ollama models to `/api/chat`, llama.cpp models to `/v1/chat/completions`
+- `_get_external_config()` imported at top level (was causing UnboundLocalError in try/except)
+- Port 8097 is the universal mobile proxy for: models, chat, search, pull, eval
+
 ## Phase 4: Research Lab + Ecosystem (2026-03-04)
 - Research Lab on port 8097 (dgx-research-lab.service)
 - 7-stage pipeline: ideation → literature → experiment_design → experiment_run → analysis → writing → review
@@ -173,22 +185,35 @@ If it's not in Tier 1, it effectively doesn't exist next session.
 - 35b-a3b-q8: runs via raw llama.cpp on port 18080 (Jess)
 - 4b is the vision model — key for computer use pipeline
 
-## Computer Use Pipeline (2026-03-04)
+## Model Lab (2026-03-05)
+- `hub/27-model-lab/index.html` — chat playground + eval + discovery
+- Multi-turn chat: sends full `messages[]` array (Ollama `/api/chat`, llama.cpp `/v1/chat/completions`)
+- All Qwen models marked as vision-capable (accept images)
+- Eval tab: test group selector, generate/import/export, per-model response display
+- All API calls through port 8097 (Research Lab proxy)
+
+## Computer Use Pipeline (2026-03-04, bugs fixed 2026-03-05)
 - Full browser (Playwright) + desktop (X11/xdotool) computer use
 - Vision: qwen3.5:4b analyzes screenshots (~7s browser, ~22s desktop)
 - Agent modes: autonomous 4b, agent-model-as-planner, direct action API, mixed
 - API on port 8095 (dgx-computer-use.service)
 - Self-growing skill ecosystem: learns from successful tasks, saves to skills/discovered/
 - Training pipeline: auto-saves observation→action pairs, export as JSONL/OpenAI/pairs
-- Dashboard: hub/22-computer-use/ (live sessions, training, library, skills)
+- Dashboard: hub/22-computer-use/ (V1), hub/26-computer-use-v2/ (V2)
 - Desktop: DISPLAY=:1, 2560x1440 GNOME, screenshots resized to 1280x720 for vision
+- V2 bugs fixed (2026-03-05): session ID mismatch (both use `task-*`), starts at Google not blank, planner min 3 actions, 600 token limit
+- Key files: `tools/computer-use/server.py`, `agent.py`, `browser.py`, `vision.py`
 
-## Agent Eval System (2026-03-04)
-- 16 tests, 6 categories: Reasoning, Coding, Instructions, Knowledge, JSON, Speed
-- API on port 8093 (dgx-agent-eval.service)
-- Dashboard: hub/23-agent-eval/
+## Agent Eval System (2026-03-05, overhauled)
+- File-based test groups: JSON files in `~/.openclaw/computer-use-data/eval/test-groups/`
+- Default: 16 tests, 6 categories (Reasoning, Coding, Instructions, Knowledge, JSON, Speed)
+- Check types: contains, contains_any, exact, regex, line_count, valid_json, json_contains, code_has
+- Generate new test groups from topic description (AI-powered, uses local 4b)
+- Import/export JSON test groups
+- API on port 8093: `/api/tests`, `/api/groups`, `/api/groups/generate`, `/api/groups/import`, `/api/evaluate`
 - Results: 4b=94.4%, 2b=82.6%, 0.8b=82.6%
-- Key: 4b is the clear best local model. 0.8b is excellent value (same score as 2b for 1/3 the size)
+- Generated test group: "advanced-math-and-calculus" (10 tests, 5 cats)
+- Key files: `tools/agent-eval/evaluator.py`, `tools/agent-eval/server.py`
 
 ## Model Hub (2026-03-04)
 - hub/24-model-hub/: Unified model management + eval integration
@@ -198,7 +223,7 @@ If it's not in Tier 1, it effectively doesn't exist next session.
 ## Service Port Map (current, verified 2026-03-05)
 | Service | Port | SystemD | CORS |
 |---------|------|---------|------|
-| Hub | 8090 | max-web-gallery | n/a |
+| Hub (Clawboard) | 8090 | max-web-gallery | n/a |
 | Stats API | 8091 | dgx-stats-api | partial |
 | Commands | 8092 | (max) | yes |
 | Eval | 8093 | dgx-agent-eval | yes |
@@ -206,9 +231,25 @@ If it's not in Tier 1, it effectively doesn't exist next session.
 | Computer Use | 8095 | dgx-computer-use | yes |
 | Comms | 8096 | dgx-comms | yes |
 | Research Lab | 8097 | dgx-research-lab | yes |
+| **ARC Watchdog** | **8098** | **arc-watchdog** | yes |
+| Video Understand | 8099 | dgx-youtube-understand | yes |
+| **ARC Task Queue** | **8100** | **arc-queue** | yes |
 | Ollama | 11434 | system | yes |
 | llama.cpp | 18080 | jess-watchdog | yes |
 | Gateway | 18789 | openclaw-gateway | n/a |
+
+## ARC Watchdog (2026-03-05)
+- Monitors all 13 services every 30s, auto-restarts failures
+- Max 3 restart attempts per service, 2min cooldown
+- Events logged to ~/.openclaw/computer-use-data/watchdog/events.jsonl
+- First run found 3 broken services and helped fix them
+- Health check endpoints customized per service (some /health, some /stats, some TCP-only)
+
+## ARC Task Queue (2026-03-05)
+- Autonomous task distribution: agents post, claim, complete tasks
+- Priority + capability matching + dependency chains
+- Auto-retry (3x) and stale task recovery (10min timeout)
+- File-backed persistence in ~/.openclaw/arc-queue/
 
 ## API Proxy Pattern (2026-03-05)
 - Port 8097 (Research Lab) is the universal API proxy for mobile access
@@ -261,3 +302,89 @@ All pages have back-to-hub navigation. Key pages:
 - Removed 3 broken qwen3.5:35b* models from Ollama (~82GB freed)
 - All 35b routing goes to llama.cpp port 18080 now
 - 17 → 14 Ollama models (cleaned duplicates of what Jess runs natively)
+
+## Compound V2 (2026-03-05)
+- Built universal RAG store: ~4,600 chunks (sessions, training, research, eval, docs)
+- Memory Agent on port 8101 (dgx-memory-agent.service)
+- Failure pipeline: classify → recurrence check → Research Lab topic creation
+- Paper ingestion from arxiv (category-filtered, relevance-gated)
+- **A/B TEST RESULT: Raw memory injection HURTS 4b planner (0% vs 100% success)**
+- Memory injection DISABLED by default — don't re-enable without compressed injection test
+- Cron: re-index 4h, paper ingest 6am daily
+- Deep context stored in COMPOUND_V2_DEEP_CONTEXT.md (read only when resuming project)
+
+## Key Lesson: Validate Before Building
+- Infrastructure that looks good on paper can actively hurt performance
+- Always A/B test before shipping — the compound loop was mechanically correct but empirically harmful
+- A constrained planner (600 tokens) can't absorb extra context — it crowds out useful info
+
+## Video Understanding System (2026-03-05)
+- Universal video analysis: YouTube + local files + live streams + iPhone camera + screen
+- Port 8099, systemd: dgx-youtube-understand.service
+- Pipeline: download → Whisper transcribe → ffmpeg frames → vision model → merge → summary
+- Hub page 29: interactive UI with source tabs (YouTube/Upload/Camera/Stream/Screen)
+- CLI: tools/youtube-understand/cli.py
+- Skill: skills/youtube-understand/SKILL.md
+- Model routing: `_model_generate()` routes Ollama vs llama.cpp based on model name
+- "jess:35b" → llama.cpp:18080, all others → Ollama:11434
+- Vision with Jess auto-falls back to Ollama 4B (llama.cpp doesn't support images)
+
+## Computer Use V2 Root Cause (2026-03-05)
+- **#1 failure: Google CAPTCHA** — switched default to DuckDuckGo
+- **#2 failure: CSS selector timeouts** — planner told to use position/text clicks instead
+- **#3 failure: Error loops** — added "LAST ACTION FAILED" warning to break loops
+- Added: continue-after-failure, research-failure, session history, GPU management panel
+
+## Ecosystem Services (2026-03-05, expanded to 11)
+| Service | Port | Health Path |
+|---------|------|-------------|
+| Hub | 8090 | / |
+| Stats API | 8091 | /api/stats |
+| Eval | 8093 | /health |
+| Status | 8094 | /status |
+| Computer Use | 8095 | /health |
+| Comms | 8096 | /api/channels |
+| Research Lab | 8097 | /api/stats |
+| Video Understanding | 8099 | /health |
+| Ollama | 11434 | /api/tags |
+| Jess (llama.cpp) | 18080 | /v1/models |
+| Gateway | 18789 | /health |
+
+## Mobile Access Pattern
+- ALL hub pages use `window.location.hostname` for API calls (no hardcoded localhost)
+- Phone accesses via Tailscale IP: 100.109.173.109
+- Each service must bind to 0.0.0.0 (not 127.0.0.1) for external access
+
+## Hub Page Count: 29
+New: 29-youtube-understand (Video Understanding)
+
+## Model Upgrade: 122B-A10B (2026-03-07)
+- **Primary model changed:** Qwen3.5-35B-A3B Q8_0 → Qwen3.5-122B-A10B UD-Q5_K_XL
+- 122B total params, 10B active per token (MoE, 256 experts, 8+1 activated)
+- UD-Q5_K_XL quant: 85.6 GB, Unsloth Dynamic (sensitive layers higher precision)
+- Loads in ~5 minutes, uses 101 GB RAM with 32K context
+- Model files: `/home/pmello/models/qwen3.5-122b-a10b-q5/` (3 GGUF shards)
+- 35B kept as fallback: `/home/pmello/models/qwen3.5-35b-a3b-q8/`
+- Swap script: `swap-model 122b` / `swap-model 35b` / `swap-model status`
+- Model Registry: `/home/pmello/models/MODEL_REGISTRY.md`
+- Model Supervisor: port 18090, `/home/pmello/models/supervisor/model-supervisor.py`
+- Supervisor has: swap with rollback, context watchdog, rescue via 0.8b validation, HTTP API
+- jess-q35.service + watchdog DISABLED (renamed .disabled) — needs update to point at 122B
+- **Load timeout must be 360s+** for 85GB model (180s caused first swap failure)
+
+## Pat's Architecture Ideas (2026-03-07)
+- **Parallel small-model swarm:** Spawn 30-50 instances of 0.8b to process data in parallel. One coordinator chunks the work, workers categorize/summarize with strict guardrails, results merge into vector DB.
+- **Use case:** Fast processing of large YouTube videos, documents, memory — instead of one slow pass with a big model, distribute to many tiny ones
+- **Model Lab must be user-facing:** Pat wants a ChatGPT-like interface (hub/27-model-lab) where he can pick any model and chat. Must allow images to be sent to any model (don't block, let it fail gracefully).
+
+## Model Swap Lessons (2026-03-07)
+- systemd `Restart=on-failure` + timer = persistent resurrection. Must disable both.
+- Split GGUFs: point at shard 1, llama.cpp finds the rest
+- Port conflicts during swap are the #1 failure mode
+- A supervisor (not a model) must manage swaps — models can't restart themselves
+
+## Known Reliability Issues (2026-03-05)
+- Stats API (8091) keeps crash-looping (WorkingDirectory config issue)
+- Need self-healing watchdog for all services
+- Video Understanding needs better real-time progress updates (like Computer Use step display)
+- Pat wants all services to be cohesive and self-healing

@@ -3,12 +3,35 @@
 ## Every Session
 1. Read `SOUL.md`
 2. Read `USER.md`
-3. Read `MEMORY.md`
-4. Read today + yesterday in `memory/YYYY-MM-DD.md` when available
-5. Read `LESSONS.md` for operational patterns
-6. Read `WORKSPACE_MAP.md` for file navigation
-7. Read `AGENT_PLAYBOOK.md` for shared operational knowledge
-5. Use local-first execution with concise output
+3. Read `RESUME.md` — **this is where you left off** (live continuity doc)
+4. Read `MEMORY.md`
+5. Read today + yesterday in `memory/YYYY-MM-DD.md` when available
+6. Read `LESSONS.md` for operational patterns
+7. Read `WORKSPACE_MAP.md` for file navigation
+8. Read `AGENT_PLAYBOOK.md` for shared operational knowledge
+9. Use local-first execution with concise output
+
+## RESUME.md — Live Continuity (MANDATORY)
+
+**Update `RESUME.md` after every significant action.** Not at session end — continuously.
+
+This is your crash-recovery document. If context overflows or the session dies mid-task,
+the next session reads RESUME.md cold and picks up exactly where you left off.
+
+### What to update:
+- **Current Task**: what you're actively working on right now
+- **What Just Happened**: last 3-5 meaningful actions (overwrite old ones)
+- **Active Decisions / Context**: key context the next session needs
+- **Blockers**: anything stuck
+- **Next Step**: the very next thing to do
+- **Session Artifacts**: files you created or modified
+
+### Rules:
+- Keep it under ~80 lines. Overwrite stale sections, don't append forever.
+- Update BEFORE starting a long/risky operation (so if it crashes, state is saved).
+- Include timestamps on updates.
+- This is NOT a log — it's a snapshot of current state.
+- **This is especially critical for you** — with 64K context, you hit limits faster than cloud agents.
 
 ## Agent-to-Agent Policy
 - JESS may delegate when it improves quality, speed, or reliability.
