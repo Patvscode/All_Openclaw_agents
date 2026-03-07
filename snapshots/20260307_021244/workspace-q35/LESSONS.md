@@ -25,3 +25,11 @@
 - **Background tab**: Notifications work even when tab is not focused
 - **Rate limiting**: Prevents notification fatigue while maintaining visibility
 - **Future enhancement**: Per-agent mute, notification scheduling, rich notifications with actions
+
+## 2026-03-05
+
+### Pinned Messages Feature
+- **User feedback pattern**: When a card is vague, propose a concrete implementation plan and wait for feedback
+- **Board communication**: Use `board discuss` to post plans and get input before starting work
+- **Chain watchdog**: Restarted twice in ~12min - pattern noted for investigation (potential session instability)
+- **Takeaway**: Document implementation plans clearly with UI design, backend changes, and file locations

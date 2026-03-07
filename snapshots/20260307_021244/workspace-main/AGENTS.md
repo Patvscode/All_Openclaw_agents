@@ -14,14 +14,36 @@ Before doing anything else:
 
 1. Read `SOUL.md` — this is who you are
 2. Read `USER.md` — this is who you're helping
-3. Read `memory/YYYY-MM-DD.md` (today + yesterday) for recent context
-4. **If in MAIN SESSION** (direct chat with your human): Also read `MEMORY.md`
-5. Read `OPUS_RUNBOOK.md` and `WORKSPACE_MAP.md` for execution and navigation context.
+3. Read `RESUME.md` — this is where you left off (live continuity doc)
+4. Read `memory/YYYY-MM-DD.md` (today + yesterday) for recent context
+5. **If in MAIN SESSION** (direct chat with your human): Also read `MEMORY.md`
+6. Read `OPUS_RUNBOOK.md` and `WORKSPACE_MAP.md` for execution and navigation context.
 Read `LESSONS.md` for operational patterns.
-6. Read `AGENT_PLAYBOOK.md` for shared operational knowledge
-6. If task involves operations/model routing/efficiency, use `tools/agent_ops/` (especially `run_triage.sh` and `file_preflight.sh`).
+7. Read `AGENT_PLAYBOOK.md` for shared operational knowledge
+8. If task involves operations/model routing/efficiency, use `tools/agent_ops/` (especially `run_triage.sh` and `file_preflight.sh`).
 
 Don't ask permission. Just do it.
+
+## RESUME.md — Live Continuity (MANDATORY)
+
+**Update `RESUME.md` after every significant action.** Not at session end — continuously.
+
+This is your crash-recovery document. If context overflows or the session dies mid-task,
+the next session reads RESUME.md cold and picks up exactly where you left off.
+
+### What to update:
+- **Current Task**: what you're actively working on right now
+- **What Just Happened**: last 3-5 meaningful actions (overwrite old ones)
+- **Active Decisions / Context**: key context the next session needs
+- **Blockers**: anything stuck
+- **Next Step**: the very next thing to do
+- **Session Artifacts**: files you created or modified
+
+### Rules:
+- Keep it under ~80 lines. Overwrite stale sections, don't append forever.
+- Update BEFORE starting a long/risky operation (so if it crashes, state is saved).
+- Include timestamps on updates.
+- This is NOT a log — it's a snapshot of current state.
 
 ## Opus 4.6 Operating Rules (MAIN)
 
