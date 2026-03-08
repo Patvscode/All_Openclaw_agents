@@ -1,0 +1,7 @@
+[Unit]
+Description=Jess Q35 health watchdog (oneshot)
+After=network.target jess-q35.service
+
+[Service]
+Type=oneshot
+ExecStart=/home/pmello/.openclaw/workspace-q35/scripts/jess_watchdog.sh
