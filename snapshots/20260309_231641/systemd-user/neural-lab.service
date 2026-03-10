@@ -1,0 +1,15 @@
+[Unit]
+Description=Neural Lab — Multi-agent swarm laboratory
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/home/pmello/.openclaw/neural-lab-env/bin/python3 /home/pmello/.openclaw/workspace-main/tools/neural-lab/orchestrator.py
+WorkingDirectory=/home/pmello/.openclaw/workspace-main/tools/neural-lab
+Restart=on-failure
+RestartSec=5
+Environment=HOME=/home/pmello
+Environment=PATH=/home/pmello/.openclaw/neural-lab-env/bin:/home/linuxbrew/.linuxbrew/bin:/home/pmello/bin:/usr/local/bin:/usr/bin:/bin
+
+[Install]
+WantedBy=default.target
