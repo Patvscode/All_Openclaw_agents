@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 -m http.server 8090 --bind 0.0.0.0 --directory /home/pmello/.openclaw/hub
+ExecStart=/usr/bin/python3 /home/pmello/.openclaw/hub/serve.py
 Restart=always
 RestartSec=2
 
