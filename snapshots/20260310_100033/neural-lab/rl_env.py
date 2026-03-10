@@ -17,12 +17,18 @@ from gymnasium import spaces
 from simulation import SimulationEngine, ACTIONS, NUM_ACTIONS, WORLD_W, WORLD_H
 
 class NeuralLabEnv(gym.Env):
-    """Single-agent Gymnasium environment wrapping the pymunk simulation."""
+    """Single-agent Gymnasium environment wrapping the pymunk simulation.
+    
+    For hide_and_seek_openai: trains one agent from controlled_team while
+    the opposing team uses built-in AI. Self-play is achieved by alternating
+    which team is controlled between training runs.
+    """
     
     metadata = {"render_modes": ["human", "rgb_array"]}
     
     def __init__(self, environment='hide_and_seek', num_agents=4, 
-                 controlled_team='seeker', max_steps=500, render_mode=None):
+                 controlled_team='seeker', max_steps=500, render_mode=None,
+                 n_hiders=None, n_seekers=None):
         super().__init__()
         
         self.sim = SimulationEngine()
@@ -32,6 +38,14 @@ class NeuralLabEnv(gym.Env):
         self.max_steps = max_steps
         self.render_mode = render_mode
         self.step_count = 0
+        
+        # For OpenAI-style: allow specifying exact team sizes
+        if environment in ('hide_and_seek', 'hide_and_seek_openai'):
+            self.n_hiders = n_hiders or num_agents // 2
+            self.n_seekers = n_seekers or (num_agents - (n_hiders or num_agents // 2))
+        else:
+            self.n_hiders = 0
+            self.n_seekers = 0
         
         # Observation: 41-dim vector (see simulation.py get_flat_observation)
         self.observation_space = spaces.Box(
@@ -50,12 +64,12 @@ class NeuralLabEnv(gym.Env):
         """Create agents for the environment."""
         self.sim.agents.clear()
         
-        teams = ['hider', 'seeker'] if self.environment == 'hide_and_seek' else ['neutral']
+        is_hs = self.environment in ('hide_and_seek', 'hide_and_seek_openai')
         colors = {'hider': '#4ecdc4', 'seeker': '#ff6b6b', 'neutral': '#ffd93d'}
         
         for i in range(self.num_agents):
-            if self.environment == 'hide_and_seek':
-                team = 'hider' if i < self.num_agents // 2 else 'seeker'
+            if is_hs:
+                team = 'hider' if i < self.n_hiders else 'seeker'
             else:
                 team = 'neutral'
             
@@ -74,16 +88,35 @@ class NeuralLabEnv(gym.Env):
         
         self.step_count = 0
         self.sim.load_environment(self.environment)
+        self.sim.max_ticks = self.max_steps  # Sync so prep_fraction works correctly
         
-        # Place agents
+        # Place agents (hiders in one area, seekers in another — like OpenAI quadrants)
         for agent in self.sim.agents.values():
-            x = random.uniform(50, WORLD_W - 50)
-            y = random.uniform(50, WORLD_H - 50)
+            if agent.team == 'hider':
+                x = random.uniform(50, WORLD_W * 0.4)
+                y = random.uniform(50, WORLD_H - 50)
+            elif agent.team == 'seeker':
+                x = random.uniform(WORLD_W * 0.6, WORLD_W - 50)
+                y = random.uniform(50, WORLD_H - 50)
+            else:
+                x = random.uniform(50, WORLD_W - 50)
+                y = random.uniform(50, WORLD_H - 50)
             self.sim._create_agent_body(agent, x, y)
             agent.energy = agent.max_energy
             agent.alive = True
             agent.score = 0
             agent.actions_taken = 0
+            # Reset tracking attrs
+            if hasattr(agent, '_found_hiders'):
+                agent._found_hiders = set()
+            if hasattr(agent, '_last_pos'):
+                del agent._last_pos
+        
+        # OpenAI-style vision: long range, wide angle, only blocked by walls
+        if self.environment == 'hide_and_seek_openai':
+            for agent in self.sim.agents.values():
+                agent.vision_range = 800.0    # Covers entire 600x400 arena diagonally (~720)
+                agent.vision_angle = math.pi  # 180° forward arc (OpenAI used full entity obs)
         
         self.sim.tick = 0
         self.sim.collision_log = []
@@ -99,18 +132,28 @@ class NeuralLabEnv(gym.Env):
         
         controlled = self.sim.agents[self._controlled_agent_id]
         prev_score = controlled.score
+        in_prep = self.sim._in_prep_phase()
         
         # Update vision for all
         for agent in self.sim.agents.values():
             if agent.alive:
                 self.sim._update_vision(agent)
         
-        # Apply controlled agent's action
-        self.sim._apply_action(controlled, int(action))
+        # During prep phase, seekers are frozen (OpenAI spec)
+        if in_prep and controlled.team == 'seeker':
+            if controlled.body:
+                controlled.body.velocity = (0, 0)
+        else:
+            # Apply controlled agent's action
+            self.sim._apply_action(controlled, int(action))
         
-        # Other agents use built-in AI
+        # Other agents use built-in AI (respect prep freeze)
         for agent in self.sim.agents.values():
             if agent.id != self._controlled_agent_id and agent.alive:
+                if in_prep and agent.team == 'seeker':
+                    if agent.body:
+                        agent.body.velocity = (0, 0)
+                    continue
                 ai_action = self.sim._get_action(agent)
                 self.sim._apply_action(agent, ai_action)
         
@@ -133,6 +176,7 @@ class NeuralLabEnv(gym.Env):
             'score': controlled.score,
             'energy': controlled.energy,
             'step': self.step_count,
+            'in_prep': in_prep,
             'collisions': len(self.sim.collision_log),
         }
         
