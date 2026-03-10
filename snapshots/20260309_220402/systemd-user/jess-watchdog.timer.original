@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Jess Q35 watchdog every 2 minutes
+
+[Timer]
+OnBootSec=90
+OnUnitActiveSec=2min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
