@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Knowledge Scout every 45 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=45min
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target
