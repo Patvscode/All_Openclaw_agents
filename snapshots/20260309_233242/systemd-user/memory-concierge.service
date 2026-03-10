@@ -1,0 +1,16 @@
+[Unit]
+Description=Memory Concierge — unified long-term memory for all agents
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /home/pmello/.openclaw/workspace-main/tools/memory-concierge/concierge.py
+WorkingDirectory=/home/pmello/.openclaw/workspace-main/tools/memory-concierge
+Environment=HOME=/home/pmello
+Restart=on-failure
+RestartSec=10
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Install]
+WantedBy=default.target

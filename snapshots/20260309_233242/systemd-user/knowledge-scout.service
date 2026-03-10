@@ -1,0 +1,10 @@
+[Unit]
+Description=Knowledge Scout — scan RAG store for patterns and connections
+After=network.target memory-concierge.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /home/pmello/.openclaw/workspace-main/tools/knowledge-scout/scout.py
+WorkingDirectory=/home/pmello/.openclaw/workspace-main/tools/knowledge-scout
+Environment=HOME=/home/pmello
+Environment=PATH=/home/pmello/bin:/home/linuxbrew/.linuxbrew/bin:/usr/local/bin:/usr/bin:/bin
