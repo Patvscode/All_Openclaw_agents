@@ -15,6 +15,7 @@ Each agent:
 Port: 8103
 """
 
+import os
 import json
 import time
 import uuid
@@ -29,13 +30,42 @@ from collections import deque
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
-from simulation import SimulationEngine, ENVIRONMENTS, ACTIONS
+from simulation import SimulationEngine, ENVIRONMENTS, ACTIONS, AGENT_ROLES
 from rl_env import NeuralLabEnv
 from model_workshop import inspect_model, scan_models, generate_architecture_explanation, duplicate_model
-from platform import platform, PluginType
+from lab_platform import platform, PluginType
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("neural-lab")
+
+def _llm_chat(model, system, user, temperature=0.5, max_tokens=400, timeout=30):
+    """Route LLM calls to the right backend. Returns response text."""
+    import requests as req
+    if model == 'llama-122b':
+        # Route to llama.cpp
+        resp = req.post('http://localhost:18080/v1/chat/completions', json={
+            'model': 'qwen3.5-122b',
+            'messages': [
+                {'role': 'system', 'content': system},
+                {'role': 'user', 'content': user},
+            ],
+            'temperature': temperature,
+            'max_tokens': max_tokens,
+        }, timeout=timeout)
+        return resp.json().get('choices', [{}])[0].get('message', {}).get('content', '')
+    else:
+        # Route to Ollama
+        resp = req.post('http://localhost:11434/api/chat', json={
+            'model': model,
+            'messages': [
+                {'role': 'system', 'content': system},
+                {'role': 'user', 'content': user},
+            ],
+            'stream': False,
+            'think': False,
+            'options': {'temperature': temperature, 'num_predict': max_tokens},
+        }, timeout=timeout)
+        return resp.json().get('message', {}).get('content', '') or resp.json().get('response', '')
 
 app = Flask(__name__)
 CORS(app)
@@ -2163,6 +2193,7 @@ def sim_start():
     env = data.get('environment', 'open_field')
     max_ticks = data.get('max_ticks', 1000)
     use_brain = data.get('use_brain', False)
+    sim.continuous = data.get('continuous', True)  # Auto-restart episodes by default
     teams = data.get('teams', {})  # {agent_id: 'hider'|'seeker'|'neutral'}
     
     # Auto-create sim agents from brain agents if none exist
@@ -2198,15 +2229,125 @@ def sim_pause():
 def sim_agents_list():
     return jsonify({"ok": True, "agents": {k: v.to_dict() for k, v in sim.agents.items()}})
 
+@app.route('/api/guide', methods=['POST'])
+def environment_guide():
+    """AI guide that deeply understands the Neural Lab environment.
+    Ask it anything about how things work, how to build, what's possible."""
+    data = request.get_json() or {}
+    question = data.get('question', '')
+    model = data.get('model', 'qwen3.5:2b')
+    
+    if not question:
+        return jsonify({"error": "question required"}), 400
+    
+    # Load AGENT_GUIDE.md for context
+    guide_path = os.path.join(os.path.dirname(__file__), 'AGENT_GUIDE.md')
+    guide_text = ''
+    try:
+        with open(guide_path) as f:
+            guide_text = f.read()
+    except Exception:
+        guide_text = 'Guide file not available.'
+    
+    # Also get current state summary
+    state_summary = f"""Current state:
+- Brain: {'running' if lab.running else 'stopped'}, {len(lab.agents)} agents
+- Simulation: {'running' if sim.running else 'stopped'}, {len(sim.agents)} sim agents, {len(sim.objects)} objects, {len(sim.wall_defs)} walls
+- Available roles: {', '.join(AGENT_ROLES_LIST)}
+- Tick: {sim.tick}/{sim.max_ticks}, Episode: {sim.episode}"""
+    
+    system = f"""You are the Neural Lab Guide — an expert AI assistant that knows everything about this environment.
+You help users understand, build, and experiment within Neural Lab.
+
+{guide_text}
+
+{state_summary}
+
+Answer the user's question clearly and practically. If they want to build something, give step-by-step instructions.
+If they ask about capabilities, be specific about what's possible and what isn't.
+Keep answers concise but complete."""
+    
+    try:
+        answer = _llm_chat(model, system, question, temperature=0.5, max_tokens=400, timeout=30)
+        return jsonify({"ok": True, "answer": answer or 'No response', "model": model})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Construction skills storage
+SKILLS_DIR = os.path.expanduser('~/.openclaw/neural-lab/skills')
+
+@app.route('/api/skills', methods=['GET'])
+def list_skills():
+    """List learned construction skills."""
+    os.makedirs(SKILLS_DIR, exist_ok=True)
+    skills = []
+    for f in sorted(os.listdir(SKILLS_DIR)):
+        if f.endswith('.json'):
+            try:
+                with open(os.path.join(SKILLS_DIR, f)) as fh:
+                    skills.append(json.loads(fh.read()))
+            except Exception:
+                pass
+    return jsonify({"skills": skills})
+
+@app.route('/api/skills/save', methods=['POST'])
+def save_skill():
+    """Save a construction skill (learned pattern)."""
+    data = request.get_json() or {}
+    name = data.get('name', '').strip()
+    if not name:
+        return jsonify({"error": "name required"}), 400
+    
+    os.makedirs(SKILLS_DIR, exist_ok=True)
+    skill = {
+        'name': name,
+        'description': data.get('description', ''),
+        'steps': data.get('steps', []),
+        'world_data': data.get('world_data'),
+        'verified': data.get('verified', False),
+        'created_by': data.get('created_by', 'unknown'),
+        'created_at': time.strftime('%Y-%m-%dT%H:%M:%S'),
+    }
+    
+    fname = name.lower().replace(' ', '-').replace('/', '-') + '.json'
+    with open(os.path.join(SKILLS_DIR, fname), 'w') as f:
+        json.dump(skill, f, indent=2)
+    
+    return jsonify({"ok": True, "skill": skill})
+
+@app.route('/api/skills/<name>/apply', methods=['POST'])
+def apply_skill(name):
+    """Apply a saved skill (load its world layout)."""
+    fpath = os.path.join(SKILLS_DIR, name + '.json')
+    if not os.path.exists(fpath):
+        return jsonify({"error": "skill not found"}), 404
+    
+    with open(fpath) as f:
+        skill = json.loads(f.read())
+    
+    if skill.get('world_data'):
+        sim.load_world(skill['world_data'])
+        return jsonify({"ok": True, "applied": name})
+    
+    return jsonify({"error": "skill has no world_data"}), 400
+
+AGENT_ROLES_LIST = ['person', 'animal', 'predator', 'guard', 'explorer', 'builder']
+
+@app.route('/api/sim/roles', methods=['GET'])
+def sim_roles():
+    """List available agent roles/personas."""
+    return jsonify({"roles": AGENT_ROLES})
+
 @app.route('/api/sim/agents/add', methods=['POST'])
 def sim_add_agent():
     data = request.get_json() or {}
     brain_agent = data.get('brain_agent', '')
     name = data.get('name', f'Agent-{len(sim.agents)}')
     team = data.get('team', 'neutral')
+    role = data.get('role', 'person')
     color = data.get('color', '#4ecdc4')
     sid = f'sim-{uuid.uuid4().hex[:4]}'
-    agent = sim.add_agent(sid, brain_agent, name, team, color)
+    agent = sim.add_agent(sid, brain_agent, name, team, color, role=role)
     return jsonify({"ok": True, "id": sid, "agent": agent.to_dict()})
 
 @app.route('/api/sim/agents/remove', methods=['POST'])
@@ -2309,6 +2450,17 @@ def _rl_train_thread(algo, environment, num_agents, total_timesteps, controlled_
                 
                 self.current_reward = 0
                 
+                # Auto-save every 25 episodes
+                if rl_training['episode'] % 25 == 0 and rl_training['episode'] > 0:
+                    try:
+                        save_dir = Path.home() / '.openclaw' / 'neural-lab' / 'rl-models'
+                        save_dir.mkdir(parents=True, exist_ok=True)
+                        checkpoint_path = save_dir / f"{algo.lower()}_{environment}_checkpoint.zip"
+                        self.model.save(str(checkpoint_path))
+                        rl_training['log'].append(f"💾 Auto-saved checkpoint at ep {rl_training['episode']}")
+                        socketio.emit('rl_autosave', {'episode': rl_training['episode'], 'path': str(checkpoint_path)})
+                    except: pass
+                
                 # Log every 10 episodes
                 if rl_training['episode'] % 10 == 0:
                     avg = sum(rl_training['rewards'][-10:]) / min(10, len(rl_training['rewards']))
@@ -2339,6 +2491,26 @@ def _rl_train_thread(algo, environment, num_agents, total_timesteps, controlled_
         model_path = save_dir / f"{algo.lower()}_{environment}_{int(time.time())}.zip"
         model.save(str(model_path))
         rl_training['model_path'] = str(model_path)
+        
+        # Save training run metadata
+        run_meta = {
+            'model_file': model_path.name,
+            'algorithm': algo,
+            'environment': environment,
+            'total_timesteps': total_timesteps,
+            'episodes': rl_training['episode'],
+            'best_reward': round(float(rl_training['best_reward']), 3),
+            'avg_reward_10': round(float(sum(rl_training['rewards'][-10:]) / max(len(rl_training['rewards'][-10:]), 1)), 3),
+            'rewards': [round(float(r), 3) for r in rl_training['rewards']],
+            'num_agents': num_agents,
+            'timestamp': time.time(),
+            'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'label': f"{algo} {environment} ({rl_training['episode']} eps, best={rl_training['best_reward']:.1f})",
+        }
+        meta_path = model_path.with_suffix('.json')
+        with open(meta_path, 'w') as f:
+            json.dump(run_meta, f, indent=2)
+        
         rl_training['log'].append(f"Training complete. Model saved: {model_path.name}")
         
         socketio.emit('rl_complete', {
@@ -2381,11 +2553,135 @@ def rl_start():
     
     return jsonify({"ok": True, "algorithm": algo, "environment": environment, "total_timesteps": total_timesteps})
 
+@app.route('/api/rl/continue', methods=['POST'])
+def rl_continue():
+    """Continue training from last saved model. {additional_timesteps, model_path?}"""
+    if rl_training['running']:
+        return jsonify({"error": "Training already running"}), 400
+    
+    data = request.get_json() or {}
+    additional = data.get('additional_timesteps', data.get('total_timesteps', 10000))
+    model_path = data.get('model_path', rl_training.get('model_path'))
+    
+    if not model_path:
+        # Find latest model
+        model_dir = Path.home() / '.openclaw' / 'neural-lab' / 'rl-models'
+        zips = sorted(model_dir.glob('*.zip'), key=lambda x: x.stat().st_mtime, reverse=True)
+        zips = [z for z in zips if 'checkpoint' not in z.name]  # Skip checkpoints, use finals
+        if not zips:
+            return jsonify({"error": "No saved models to continue from"}), 400
+        model_path = str(zips[0])
+    
+    # Detect algo from filename
+    algo = 'PPO'
+    for a in ['PPO', 'A2C', 'DQN']:
+        if a.lower() in Path(model_path).name.lower():
+            algo = a
+            break
+    
+    # Detect environment from filename
+    environment = 'foraging'
+    for env in ['foraging', 'hide_and_seek', 'maze', 'open_field']:
+        if env in Path(model_path).name:
+            environment = env
+            break
+    
+    rl_training['running'] = True
+    rl_training['episode'] = 0
+    rl_training['rewards'] = []
+    rl_training['best_reward'] = float('-inf')
+    rl_training['current_timesteps'] = 0
+    rl_training['log'] = [f"📂 Continuing from: {Path(model_path).name}"]
+    
+    def _continue_thread():
+        try:
+            from stable_baselines3 import PPO, A2C, DQN
+            from rl_env import NeuralLabEnv
+            
+            env = NeuralLabEnv(sim, environment=environment, num_agents=4)
+            AlgoClass = {'PPO': PPO, 'A2C': A2C, 'DQN': DQN}[algo]
+            model = AlgoClass.load(model_path, env=env)
+            
+            class ContCallback:
+                def __init__(self2):
+                    self2.model = model
+                    self2.current_reward = 0
+                    self2.num_timesteps = 0
+                def __call__(self2, locals_dict, globals_dict):
+                    if not rl_training['running']:
+                        return False
+                    self2.num_timesteps = locals_dict.get('self', model).num_timesteps
+                    rl_training['current_timesteps'] = self2.num_timesteps
+                    if locals_dict.get('rewards') is not None:
+                        self2.current_reward += locals_dict['rewards'][0]
+                    if locals_dict.get('dones', [False])[0]:
+                        rl_training['episode'] += 1
+                        rl_training['rewards'].append(round(self2.current_reward, 3))
+                        if self2.current_reward > rl_training['best_reward']:
+                            rl_training['best_reward'] = self2.current_reward
+                        if len(rl_training['rewards']) > 100:
+                            rl_training['rewards'] = rl_training['rewards'][-100:]
+                        socketio.emit('rl_progress', {
+                            'episode': rl_training['episode'],
+                            'reward': round(float(self2.current_reward), 3),
+                            'best': round(float(rl_training['best_reward']), 3),
+                            'timesteps': self2.num_timesteps,
+                            'total': additional,
+                        })
+                        self2.current_reward = 0
+                    return True
+            
+            cb = ContCallback()
+            model.learn(total_timesteps=additional, callback=cb)
+            
+            # Save
+            save_dir = Path.home() / '.openclaw' / 'neural-lab' / 'rl-models'
+            save_dir.mkdir(parents=True, exist_ok=True)
+            new_path = save_dir / f"{algo.lower()}_{environment}_{int(time.time())}.zip"
+            model.save(str(new_path))
+            rl_training['model_path'] = str(new_path)
+            
+            # Save metadata
+            run_meta = {
+                'model_file': new_path.name,
+                'algorithm': algo, 'environment': environment,
+                'total_timesteps': additional, 'episodes': rl_training['episode'],
+                'best_reward': round(float(rl_training['best_reward']), 3),
+                'avg_reward_10': round(float(sum(rl_training['rewards'][-10:]) / max(len(rl_training['rewards'][-10:]), 1)), 3),
+                'rewards': [round(float(r), 3) for r in rl_training['rewards']],
+                'continued_from': Path(model_path).name,
+                'timestamp': time.time(),
+                'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'label': f"{algo} {environment} (continued, {rl_training['episode']} eps, best={rl_training['best_reward']:.1f})",
+            }
+            with open(new_path.with_suffix('.json'), 'w') as f:
+                json.dump(run_meta, f, indent=2)
+            
+            rl_training['log'].append(f"✅ Training complete. Saved: {new_path.name}")
+            socketio.emit('rl_complete', {
+                'episodes': rl_training['episode'],
+                'best_reward': round(rl_training['best_reward'], 3),
+                'model_path': str(new_path),
+            })
+        except Exception as e:
+            rl_training['log'].append(f"❌ Error: {e}")
+            socketio.emit('rl_error', {'error': str(e)})
+        finally:
+            rl_training['running'] = False
+    
+    t = threading.Thread(target=_continue_thread, daemon=True)
+    rl_training['thread'] = t
+    t.start()
+    
+    return jsonify({"ok": True, "algorithm": algo, "environment": environment, 
+                     "continued_from": Path(model_path).name, "additional_timesteps": additional})
+
 @app.route('/api/rl/stop', methods=['POST'])
 def rl_stop():
-    """Stop RL training."""
+    """Stop RL training gracefully — auto-saves before stopping."""
     rl_training['running'] = False
-    return jsonify({"ok": True})
+    # The training thread will save on exit since we set running=False
+    return jsonify({"ok": True, "message": "Stopping... model will be saved"})
 
 @app.route('/api/rl/status', methods=['GET'])
 def rl_status():
@@ -2411,19 +2707,67 @@ def rl_status():
 
 @app.route('/api/rl/models', methods=['GET'])
 def rl_models():
-    """List saved RL models."""
+    """List saved RL models with training metadata."""
     model_dir = Path.home() / '.openclaw' / 'neural-lab' / 'rl-models'
     if not model_dir.exists():
         return jsonify({"ok": True, "models": []})
     models = []
     for f in sorted(model_dir.glob('*.zip'), key=lambda x: x.stat().st_mtime, reverse=True):
-        models.append({
+        entry = {
             'name': f.name,
             'path': str(f),
             'size_mb': round(f.stat().st_size / 1024 / 1024, 1),
             'modified': f.stat().st_mtime,
-        })
-    return jsonify({"ok": True, "models": models})
+        }
+        # Load metadata if exists
+        meta_path = f.with_suffix('.json')
+        if meta_path.exists():
+            try:
+                with open(meta_path) as mf:
+                    meta = json.load(mf)
+                entry.update({
+                    'label': meta.get('label', ''),
+                    'algorithm': meta.get('algorithm', ''),
+                    'environment': meta.get('environment', ''),
+                    'episodes': meta.get('episodes', 0),
+                    'best_reward': meta.get('best_reward', 0),
+                    'avg_reward_10': meta.get('avg_reward_10', 0),
+                    'total_timesteps': meta.get('total_timesteps', 0),
+                    'date': meta.get('date', ''),
+                    'rewards': meta.get('rewards', []),
+                })
+            except: pass
+        models.append(entry)
+    return jsonify({"ok": True, "models": models, "count": len(models)})
+
+@app.route('/api/rl/models/<name>/label', methods=['POST'])
+def rl_model_label(name):
+    """Rename/label a saved model."""
+    data = request.get_json() or {}
+    label = data.get('label', '')
+    model_dir = Path.home() / '.openclaw' / 'neural-lab' / 'rl-models'
+    meta_path = model_dir / name.replace('.zip', '.json')
+    if meta_path.exists():
+        with open(meta_path) as f:
+            meta = json.load(f)
+        meta['label'] = label
+        with open(meta_path, 'w') as f:
+            json.dump(meta, f, indent=2)
+        return jsonify({"ok": True, "label": label})
+    return jsonify({"error": "Model not found"}), 404
+
+@app.route('/api/rl/models/<name>/delete', methods=['POST'])
+def rl_model_delete(name):
+    """Delete a saved model."""
+    model_dir = Path.home() / '.openclaw' / 'neural-lab' / 'rl-models'
+    model_path = model_dir / name
+    meta_path = model_dir / name.replace('.zip', '.json')
+    if model_path.exists():
+        model_path.unlink()
+        if meta_path.exists():
+            meta_path.unlink()
+        return jsonify({"ok": True})
+    return jsonify({"error": "Model not found"}), 404
 
 @app.route('/api/rl/evaluate', methods=['POST'])
 def rl_evaluate():
@@ -2463,6 +2807,95 @@ def rl_evaluate():
     
     avg = sum(r['reward'] for r in results) / len(results)
     return jsonify({"ok": True, "results": results, "avg_reward": round(avg, 3), "model": model_path})
+
+# ─── RL Model Deployment (use trained model in live sim) ───
+rl_deployed = {'model': None, 'algo': None, 'path': None, 'active': False}
+
+@app.route('/api/rl/deploy', methods=['POST'])
+def rl_deploy():
+    """Load a trained RL model and use it to control sim agents."""
+    data = request.get_json() or {}
+    model_path = data.get('model_path', '')
+    
+    if not model_path:
+        # Auto-pick the best/latest model
+        model_dir = Path.home() / '.openclaw' / 'neural-lab' / 'rl-models'
+        if model_dir.exists():
+            models = sorted(model_dir.glob('*.zip'), key=lambda x: x.stat().st_mtime, reverse=True)
+            if models:
+                model_path = str(models[0])
+    
+    if not model_path or not Path(model_path).exists():
+        return jsonify({"error": "No RL model found. Train one first!"}), 404
+    
+    try:
+        from stable_baselines3 import PPO, A2C, DQN
+        algo_map = {'ppo': PPO, 'a2c': A2C, 'dqn': DQN}
+        algo_name = Path(model_path).stem.split('_')[0]
+        AlgoClass = algo_map.get(algo_name, PPO)
+        
+        rl_deployed['model'] = AlgoClass.load(model_path)
+        rl_deployed['algo'] = algo_name.upper()
+        rl_deployed['path'] = model_path
+        rl_deployed['active'] = True
+        
+        # Set the sim brain callback to use the RL model
+        def rl_brain_callback(agent_id, observation):
+            """Use trained RL model to decide actions."""
+            if rl_deployed['model'] is None:
+                return 0  # noop
+            import numpy as np
+            # Observation is a dict from sim — convert to flat array
+            obs = observation if isinstance(observation, np.ndarray) else _obs_to_array(observation)
+            action, _ = rl_deployed['model'].predict(obs, deterministic=True)
+            return int(action)
+        
+        sim.brain_callback = rl_brain_callback
+        
+        return jsonify({
+            "ok": True,
+            "model": Path(model_path).name,
+            "algorithm": rl_deployed['algo'],
+            "message": f"Deployed {algo_name.upper()} model — agents now use trained RL"
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/rl/undeploy', methods=['POST'])
+def rl_undeploy():
+    """Remove RL model from live sim, revert to built-in AI."""
+    rl_deployed['model'] = None
+    rl_deployed['active'] = False
+    sim.brain_callback = None
+    return jsonify({"ok": True, "message": "Reverted to built-in AI"})
+
+@app.route('/api/rl/deployed', methods=['GET'])
+def rl_deployed_status():
+    """Check if an RL model is deployed."""
+    return jsonify({
+        "ok": True,
+        "active": rl_deployed['active'],
+        "algorithm": rl_deployed.get('algo'),
+        "model": Path(rl_deployed['path']).name if rl_deployed.get('path') else None,
+    })
+
+def _obs_to_array(obs):
+    """Convert observation dict to flat numpy array for RL model."""
+    import numpy as np
+    if isinstance(obs, np.ndarray):
+        return obs.astype(np.float32)
+    if isinstance(obs, dict):
+        parts = []
+        for k in sorted(obs.keys()):
+            v = obs[k]
+            if isinstance(v, (int, float)):
+                parts.append(float(v))
+            elif isinstance(v, (list, tuple)):
+                parts.extend([float(x) for x in v])
+            elif isinstance(v, str):
+                parts.append(hash(v) % 100 / 100.0)
+        return np.array(parts[:41], dtype=np.float32)  # RL env expects 41-dim
+    return np.zeros(41, dtype=np.float32)
 
 # ═══════════════════════════════════════════
 # ─── MODEL WORKSHOP API ───
@@ -2561,6 +2994,88 @@ def platform_template_apply(template_id):
     })
     return jsonify({"ok": True, "template": asset.name})
 
+@app.route('/api/workshop/edit', methods=['POST'])
+def workshop_edit():
+    """Edit model layers. {path, action, layers[], params{}}
+    Actions: zero, scale, noise, prune, toggle, undo"""
+    data = request.get_json() or {}
+    model_path = data.get('path', '')
+    action = data.get('action', '')
+    layer_names = data.get('layers', [])
+    params = data.get('params', {})
+    
+    if not model_path or not action:
+        return jsonify({"error": "path and action required"}), 400
+    
+    # Find safetensors file
+    st_file = None
+    for f in ['model.safetensors', 'pytorch_model.safetensors']:
+        fp = os.path.join(model_path, f)
+        if os.path.exists(fp):
+            st_file = fp
+            break
+    
+    if not st_file:
+        return jsonify({"error": "No safetensors file found. Only safetensors models can be edited."}), 400
+    
+    try:
+        from safetensors.torch import load_file, save_file
+        import torch
+        
+        tensors = load_file(st_file)
+        modified = 0
+        
+        if action == 'undo':
+            # Check for backup
+            backup = st_file + '.bak'
+            if os.path.exists(backup):
+                import shutil
+                shutil.copy2(backup, st_file)
+                return jsonify({"ok": True, "message": "Restored from backup"})
+            return jsonify({"error": "No backup found"}), 400
+        
+        # Make backup before first edit
+        backup = st_file + '.bak'
+        if not os.path.exists(backup):
+            import shutil
+            shutil.copy2(st_file, backup)
+        
+        for name in layer_names:
+            if name not in tensors:
+                continue
+            t = tensors[name]
+            
+            if action == 'zero':
+                tensors[name] = torch.zeros_like(t)
+                modified += 1
+            elif action == 'scale':
+                factor = params.get('factor', 0.5)
+                tensors[name] = t * factor
+                modified += 1
+            elif action == 'noise':
+                std = params.get('std', 0.01)
+                tensors[name] = t + torch.randn_like(t) * std
+                modified += 1
+            elif action == 'prune':
+                threshold = params.get('threshold', 0.01)
+                mask = t.abs() > threshold
+                tensors[name] = t * mask.float()
+                pruned = (~mask).sum().item()
+                modified += 1
+            elif action == 'toggle':
+                tensors[name] = torch.zeros_like(t) if t.abs().mean() > 0 else torch.randn_like(t) * 0.02
+                modified += 1
+        
+        if modified > 0:
+            save_file(tensors, st_file)
+            return jsonify({"ok": True, "message": f"{action}: modified {modified} layer(s)"})
+        return jsonify({"error": f"No matching layers found for: {layer_names[:3]}"}), 400
+        
+    except ImportError:
+        return jsonify({"error": "safetensors/torch not installed in this env"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/workshop/duplicate', methods=['POST'])
 def workshop_duplicate():
     """Duplicate a model for safe experimentation. {path, name?}"""
@@ -2654,6 +3169,74 @@ def sim_world_list():
         except Exception:
             pass
     return jsonify({"ok": True, "worlds": worlds})
+
+@app.route('/api/sim/world/generate', methods=['POST'])
+def sim_world_generate():
+    """AI-generate a world from natural language description. {prompt, model?}"""
+    data = request.get_json() or {}
+    prompt = data.get('prompt', '')
+    ai_model = data.get('model', 'qwen3.5:2b')
+    
+    if not prompt:
+        return jsonify({"error": "prompt required"}), 400
+    
+    # Get current state so AI knows what exists
+    existing_walls = len(sim.wall_defs)
+    existing_objects = len(sim.objects)
+    
+    system = f"""You are a world builder for a 2D simulation arena (600x400 pixels).
+The arena currently has {existing_walls} walls and {existing_objects} objects.
+Generate ADDITIONAL objects/walls to add based on the user's request.
+
+IMPORTANT: Output ONLY valid JSON. No explanation, no markdown, no code blocks.
+
+Format: {{"walls": [{{"x1":N,"y1":N,"x2":N,"y2":N}}], "objects": [{{"x":N,"y":N,"type":"TYPE"}}]}}
+
+Rules:
+- Arena is 600 wide, 400 tall. Coordinates: 10-590 for x, 10-390 for y.
+- Walls = line segments from (x1,y1) to (x2,y2). Use for barriers, rooms, mazes.
+- Object types: box (pushable obstacle), food (green collectible), flag (goal marker), ramp (incline).
+- For a "house": 4 walls forming a rectangle with a gap for the door.
+- For a "maze": many walls forming corridors. Include dead ends.
+- For an "obstacle course": walls + boxes + ramps in a path.
+- Place things spread out, not all on top of each other.
+- ONLY output the JSON object. Nothing else."""
+    
+    try:
+        import requests as req
+        text = _llm_chat(ai_model, system, prompt, temperature=0.7, max_tokens=500, timeout=60)
+        
+        # Extract JSON from response
+        import re
+        json_match = re.search(r'\{[\s\S]*\}', text)
+        if json_match:
+            world_data = json.loads(json_match.group())
+            append = data.get('append', True)  # Default: add to existing world
+            sim.load_world(world_data, append=append)
+            return jsonify({
+                "ok": True,
+                "walls": len(world_data.get('walls', [])),
+                "objects": len(world_data.get('objects', [])),
+                "raw": world_data,
+            })
+        else:
+            return jsonify({"error": "AI didn't produce valid JSON", "raw": text}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/sim/world/move', methods=['POST'])
+def sim_world_move():
+    """Move an object to new position. {id, x, y}"""
+    data = request.get_json() or {}
+    obj_id = data.get('id', '')
+    x = float(data.get('x', 0))
+    y = float(data.get('y', 0))
+    
+    if not obj_id:
+        return jsonify({"error": "id required"}), 400
+    
+    moved = sim.move_object(obj_id, x, y)
+    return jsonify({"ok": moved, "id": obj_id, "x": float(x), "y": float(y)})
 
 @app.route('/api/sim/world/load', methods=['POST'])
 def sim_world_load():
