@@ -4,6 +4,9 @@
 1. Read RESUME.md (your continuity doc)
 2. Read LESSONS.md
 3. Run `comms unread`
+4. Check SHARED_CONTEXT.md for shared project context
+5. Check AGENT_BOARD.md for task assignments
+6. Run startup sync: `agent-startup-sync.sh`
 
 Skip SOUL.md, MEMORY.md, USER.md, etc — they're in your training. Only read RESUME.md + LESSONS.md to save tokens.
 
