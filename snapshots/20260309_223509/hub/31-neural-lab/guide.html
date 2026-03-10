@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>Neural Lab — Guide</title>
+<style>
+:root { --bg: #0f0f1a; --surface: #1a1a2e; --surface2: #252540; --border: #333355; --text: #e8e8f0; --text-dim: #8888aa; --accent: #4ecdc4; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); padding: 1rem; max-width: 800px; margin: 0 auto; line-height: 1.7; }
+h1 { color: var(--accent); margin-bottom: 0.5rem; font-size: 1.5rem; }
+h2 { color: var(--accent); margin: 1.5rem 0 0.5rem; font-size: 1.1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+h3 { color: #a78bfa; margin: 1rem 0 0.3rem; font-size: 0.95rem; }
+p { margin: 0.4rem 0; font-size: 0.85rem; }
+code { background: var(--surface2); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.8rem; color: var(--accent); }
+pre { background: var(--surface2); padding: 0.75rem; border-radius: 6px; overflow-x: auto; margin: 0.5rem 0; font-size: 0.75rem; line-height: 1.5; }
+a { color: var(--accent); }
+ul { padding-left: 1.2rem; font-size: 0.85rem; }
+li { margin: 0.2rem 0; }
+.badge { display: inline-block; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.65rem; font-weight: 700; }
+.badge-green { background: #22c55e33; color: #22c55e; }
+.badge-blue { background: #3b82f633; color: #60a5fa; }
+.badge-purple { background: #a78bfa33; color: #a78bfa; }
+.badge-orange { background: #f9731633; color: #f97316; }
+table { width: 100%; border-collapse: collapse; margin: 0.5rem 0; font-size: 0.8rem; }
+th, td { padding: 0.35rem 0.5rem; border: 1px solid var(--border); text-align: left; }
+th { background: var(--surface2); color: var(--accent); }
+.back { display: inline-block; padding: 0.3rem 0.6rem; background: var(--surface2); border-radius: 6px; color: var(--accent); text-decoration: none; font-size: 0.8rem; margin-bottom: 1rem; }
+</style>
+</head>
+<body>
+<a href="./" class="back">← Back to Neural Lab</a>
+
+<h1>🧬 Neural Lab Guide</h1>
+<p style="color:var(--text-dim);">A local AI research platform for DGX Spark — brain simulation, RL training, model surgery, and world building.</p>
+
+<h2>🏗️ Architecture Overview</h2>
+
+<h3>How It Runs</h3>
+<p>Neural Lab is a <strong>Python Flask + Socket.IO server</strong> running as a systemd user service on the DGX Spark. The UI is a single-page HTML/JS app served by the Clawboard hub.</p>
+
+<pre>
+┌──────────────────────────────────────────────────────────┐
+│  Your Phone / Browser                                     │
+│  http://100.109.173.109:8090/31-neural-lab/               │
+│  (HTML + JS + Three.js + Socket.IO client)                │
+└────────────┬─────────────────────────────────┬────────────┘
+             │ REST API                        │ WebSocket
+             ▼                                 ▼
+┌──────────────────────────────────────────────────────────┐
+│  Neural Lab Backend (port 8103)                           │
+│  orchestrator.py — Flask + Flask-SocketIO                 │
+│  ├── SwarmOrchestrator (brain agents, message bus)        │
+│  ├── SimulationEngine (pymunk physics)                    │
+│  ├── NeuralLabPlatform (registry, assets, extensions)     │
+│  ├── RL Training (stable-baselines3 + PyTorch)            │
+│  └── Model Workshop (safetensors inspection)              │
+│  Service: neural-lab.service                              │
+│  Python: /home/pmello/.openclaw/neural-lab-env/           │
+└────────────┬─────────────────────────────────┬────────────┘
+             │ HTTP (Ollama API)               │ File I/O
+             ▼                                 ▼
+┌─────────────────────────┐    ┌────────────────────────────┐
+│  Ollama (port 11434)     │    │  Local Files                │
+│  qwen3.5:0.8b (agents)  │    │  ~/.openclaw/neural-lab/    │
+│  qwen3.5:2b (prefrontal)│    │  ├── snapshots/             │
+│  qwen3.5:4b (vision)    │    │  ├── memories-*.json        │
+│                          │    │  ├── rl-models/             │
+│  llama.cpp (port 18080)  │    │  ├── worlds/                │
+│  122B-A10B (narrator)    │    │  ├── extensions/            │
+└─────────────────────────┘    │  └── logs/                  │
+                                └────────────────────────────┘
+</pre>
+
+<h3>Connection Flow</h3>
+<ol style="font-size:0.85rem;">
+<li><strong>Hub server</strong> (port 8090) serves the static HTML page</li>
+<li>Page loads and connects <strong>Socket.IO</strong> to port 8103 (the backend)</li>
+<li>UI polls <code>/api/state</code> every 1-2 seconds for agent/brain state</li>
+<li>Real-time events (messages, training progress) come via WebSocket</li>
+<li>All brain agents call <strong>Ollama</strong> (0.8b/2b) for thinking</li>
+<li>Camera/mic from your phone → backend API → Visual/Auditory Cortex agents</li>
+<li>Multiple devices connect to the same backend (shared brain)</li>
+</ol>
+
+<h2>🚀 Quick Start</h2>
+
+<h3>1. Start the Brain</h3>
+<p>Click <strong>🧠 Start Brain</strong>. This launches 17 agents across 5 brain regions:</p>
+<table>
+<tr><th>Region</th><th>Agents</th><th>Model</th><th>Role</th></tr>
+<tr><td>🧠 Prefrontal Cortex</td><td>3</td><td>2b</td><td>Planning, decisions, executive control</td></tr>
+<tr><td>👁️ Visual Cortex</td><td>3</td><td>0.8b</td><td>Process camera input, scene understanding</td></tr>
+<tr><td>👂 Auditory Cortex</td><td>3</td><td>0.8b</td><td>Process audio/speech (via Whisper)</td></tr>
+<tr><td>🧩 Hippocampus</td><td>3</td><td>0.8b</td><td>Memory formation, pattern recognition</td></tr>
+<tr><td>💬 Broca's Area</td><td>3</td><td>2b</td><td>Speech production, responses</td></tr>
+</table>
+
+<h3>2. Chat with the Brain</h3>
+<p>Use the <strong>💬 Chat</strong> tab or the <strong>🧠 Narrator</strong> widget. Your messages flow:</p>
+<pre>You → Wernicke's (comprehension) → Prefrontal (thinking) → Broca's (response) → You</pre>
+<p>The Narrator is separate — it observes the brain and explains what's happening.</p>
+
+<h3>3. Run a Simulation</h3>
+<ol style="font-size:0.85rem;">
+<li>Go to <strong>🏟️ Sim</strong> tab</li>
+<li>Select an environment (Hide &amp; Seek, Foraging, Maze, Open Field)</li>
+<li>Click <strong>▶ Start</strong></li>
+<li>Watch agents move in the 3D arena</li>
+<li>Enable <strong>Brain-controlled</strong> to let the LLM drive agent decisions</li>
+</ol>
+
+<h3>4. Train with RL</h3>
+<ol style="font-size:0.85rem;">
+<li>Expand <strong>🧪 RL Training</strong> at the bottom of the Sim tab</li>
+<li>Pick algorithm (PPO, A2C, DQN), environment, and timesteps</li>
+<li>Click <strong>🚀 Train</strong></li>
+<li>Watch the reward curve update in real-time</li>
+<li>Trained models auto-save to <code>~/.openclaw/neural-lab/rl-models/</code></li>
+</ol>
+
+<h3>5. Inspect Models</h3>
+<ol style="font-size:0.85rem;">
+<li>Go to <strong>🔬 Workshop</strong> tab — models auto-scan</li>
+<li>Click any model to see layers, shapes, weight statistics</li>
+<li>Click <strong>🤖 AI Explain</strong> for a plain-language architecture summary</li>
+<li>Click <strong>📋 Duplicate for Editing</strong> to make a safe copy</li>
+</ol>
+
+<h3>6. Build Worlds</h3>
+<ol style="font-size:0.85rem;">
+<li>In <strong>🏟️ Sim</strong> tab, expand <strong>🏗️ World Builder</strong></li>
+<li>Select a tool (Wall, Box, Food, Flag, Ramp)</li>
+<li>Click on the 3D arena to place objects</li>
+<li>Save your world for later, or load environment templates from the <strong>🧩 Platform</strong> tab</li>
+</ol>
+
+<h2>🧩 Platform &amp; Extensions</h2>
+<p>Everything in Neural Lab is a plugin. The <strong>🧩 Platform</strong> tab shows all registered components:</p>
+<ul>
+<li><strong>20 Object Prefabs</strong> — walls, boxes, food, traps, portals, water, mud, shelters</li>
+<li><strong>6 Physics Materials</strong> — concrete, ice, rubber, wood, metal, sand</li>
+<li><strong>5 Environment Templates</strong> — arena, maze, CTF, obstacle course, foraging</li>
+<li><strong>5 Sensors</strong> — vision cone, proximity, audio, compass, energy</li>
+<li><strong>3 Training Algorithms</strong> — PPO, A2C, DQN</li>
+<li><strong>4 Reward Functions</strong> — foraging, exploration, survival, team</li>
+</ul>
+
+<h3>Writing Extensions</h3>
+<p>Drop a <code>.py</code> file into <code>~/.openclaw/neural-lab/extensions/</code>:</p>
+<pre>
+# my_extension.py
+def register(registry):
+    from platform import PluginEntry, PluginType
+    registry.register(PluginEntry(
+        id='env-my-world',
+        name='My Custom World',
+        type=PluginType.ENVIRONMENT,
+        description='A custom environment',
+        tags=['custom'],
+    ))
+</pre>
+
+<h2>💻 CLI Tools</h2>
+<pre>
+# Model Workshop
+workshop scan              # List all 15+ models
+workshop inspect gpt2      # See every layer &amp; weight stats
+workshop layers gpt2 attn  # Filter to attention layers
+workshop explain whisper    # AI explains the architecture
+workshop duplicate gpt2 my-exp  # Safe copy for editing
+workshop python            # Interactive Python + safetensors
+</pre>
+
+<h2>📡 API Reference</h2>
+<table>
+<tr><th>Endpoint</th><th>Method</th><th>Description</th></tr>
+<tr><td><code>/api/state</code></td><td>GET</td><td>Full brain state (agents, messages, connections)</td></tr>
+<tr><td><code>/api/start</code></td><td>POST</td><td>Start brain with mode &amp; agents config</td></tr>
+<tr><td><code>/api/ask</code></td><td>POST</td><td>Send a message to the brain</td></tr>
+<tr><td><code>/api/narrate</code></td><td>POST</td><td>Get narrator summary</td></tr>
+<tr><td><code>/api/sim/start</code></td><td>POST</td><td>Start simulation {environment, num_agents}</td></tr>
+<tr><td><code>/api/sim/state</code></td><td>GET</td><td>Current sim state (agents, physics, objects)</td></tr>
+<tr><td><code>/api/sim/world/add</code></td><td>POST</td><td>Add object {type, x, y}</td></tr>
+<tr><td><code>/api/sim/world/save</code></td><td>POST</td><td>Save world layout {name}</td></tr>
+<tr><td><code>/api/rl/start</code></td><td>POST</td><td>Start RL training {algorithm, environment, total_timesteps}</td></tr>
+<tr><td><code>/api/rl/status</code></td><td>GET</td><td>Training progress (episodes, rewards, timesteps)</td></tr>
+<tr><td><code>/api/workshop/scan</code></td><td>GET</td><td>Scan for model files</td></tr>
+<tr><td><code>/api/workshop/inspect</code></td><td>POST</td><td>Inspect a model {path}</td></tr>
+<tr><td><code>/api/platform</code></td><td>GET</td><td>Full platform state (registry, assets, extensions)</td></tr>
+<tr><td><code>/api/platform/templates/&lt;id&gt;/apply</code></td><td>POST</td><td>Apply environment template</td></tr>
+</table>
+
+<h2>🔧 Service Management</h2>
+<pre>
+# Check status
+systemctl --user status neural-lab.service
+
+# Restart after code changes
+systemctl --user restart neural-lab.service
+
+# View logs
+journalctl --user -u neural-lab.service -f
+
+# The service uses a Python venv with all dependencies:
+# /home/pmello/.openclaw/neural-lab-env/
+#   pymunk, torch, stable-baselines3, gymnasium, pettingzoo,
+#   safetensors, flask, flask-socketio, requests
+</pre>
+
+<h2>📁 File Structure</h2>
+<pre>
+~/.openclaw/workspace-main/tools/neural-lab/
+├── orchestrator.py    # Main server (~2700 lines)
+├── simulation.py      # Physics engine (pymunk)
+├── rl_env.py          # Gymnasium RL environment wrapper
+├── model_workshop.py  # Model inspection/surgery
+├── platform.py        # Plugin registry, assets, extensions
+├── ARCHITECTURE.md    # Full technical specification
+└── RESEARCH.md        # Research directions
+
+~/.openclaw/hub/31-neural-lab/
+├── index.html         # Main UI (~3300 lines, 10 tabs)
+├── guide.html         # This guide
+└── lib/three.min.js   # Three.js (local copy)
+
+~/.openclaw/neural-lab/
+├── snapshots/         # Brain state snapshots
+├── memories-*.json    # Agent memories per session
+├── rl-models/         # Trained RL models (.zip)
+├── worlds/            # Saved world layouts
+├── extensions/        # Custom plugins (.py)
+└── logs/              # Session logs
+
+~/models/workshop/     # Model library (safetensors)
+├── bert-tiny-4m/      # 4M params — fast experiments
+├── gpt2-124m/         # 124M — classic transformer
+├── whisper-tiny-39m/  # Audio transcription model
+├── clip-vit-base-150m/# Vision+text multimodal
+├── tinyllama-1.1b/    # Llama architecture
+└── ... (15 models total)
+</pre>
+
+<h2>⚡ Hardware Requirements</h2>
+<table>
+<tr><th>Component</th><th>Requirement</th><th>DGX Spark</th></tr>
+<tr><td>RAM</td><td>16GB minimum</td><td>128GB ✓</td></tr>
+<tr><td>GPU</td><td>Optional (CPU training works)</td><td>GB10 ✓</td></tr>
+<tr><td>Ollama</td><td>0.8b model minimum</td><td>0.8b, 2b, 4b ✓</td></tr>
+<tr><td>Python</td><td>3.12+</td><td>3.14 ✓</td></tr>
+<tr><td>Storage</td><td>~10GB for models</td><td>1.9TB free ✓</td></tr>
+</table>
+
+<p style="margin-top:2rem;color:var(--text-dim);font-size:0.7rem;">Neural Lab v2.2 — Built on DGX Spark with ⚡ by the ARC platform</p>
+</body>
+</html>
+</content>
+</invoke>
