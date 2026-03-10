@@ -1,0 +1,12 @@
+[Unit]
+Description=MAX Web Gallery (port 8090)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /home/pmello/.openclaw/hub/serve.py
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target
