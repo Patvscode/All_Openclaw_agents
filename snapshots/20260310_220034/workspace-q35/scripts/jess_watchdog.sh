@@ -12,6 +12,21 @@ ts() { date -Is; }
 
 if ! curl -fsS --max-time 4 "$HEALTH_URL" >/dev/null 2>&1; then
   echo "$(ts) healthcheck failed; restarting $SERVICE" >> "$LOG_FILE"
+  # Ensure service is not masked before attempting restart
+  if systemctl --user is-enabled "$SERVICE" 2>&1 | grep -q masked; then
+    echo "$(ts) service was masked — unmasking first" >> "$LOG_FILE"
+    systemctl --user unmask "$SERVICE" 2>/dev/null || true
+    # Restore from backup if unmask deleted the unit file
+    if ! systemctl --user cat "$SERVICE" >/dev/null 2>&1; then
+      BAK="/home/pmello/.config/systemd/user/${SERVICE}.bak"
+      UNIT="/home/pmello/.config/systemd/user/${SERVICE}"
+      if [ -f "$BAK" ]; then
+        cp "$BAK" "$UNIT"
+        systemctl --user daemon-reload
+        echo "$(ts) restored unit from .bak" >> "$LOG_FILE"
+      fi
+    fi
+  fi
   systemctl --user restart "$SERVICE"
   sleep 2
   if ! curl -fsS --max-time 6 "$HEALTH_URL" >/dev/null 2>&1; then

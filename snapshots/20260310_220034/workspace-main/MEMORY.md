@@ -413,3 +413,39 @@ New: 29-youtube-understand (Video Understanding)
 2. Workers search in parallel (3 concurrent queries)
 3. Workers summarize their chunk batches in parallel
 4. Coordinator synthesizes partial summaries into final answer
+
+## Simulation Environments (2026-03-10)
+
+### Neural Lab (Browser-Based Sim)
+- Port 8103, hub/31-neural-lab/
+- Browser-based multi-agent sim with pymunk physics, Three.js 3D, RL training (SB3)
+- 17 agents, 8 brain regions, world builder, first-person mode, model workshop
+- v3.2: teams, screen recording, 27K+ episodes trained
+- Python venv: ~/.openclaw/neural-lab-env/
+
+### Isaac Lab (NVIDIA GPU Physics)
+- Replicating OpenAI "Emergent Tool Use from Multi-Agent Autocurricula" (2019)
+- Isaac Sim 5.1.0 + Isaac Lab 0.54.3 on DGX Spark ARM64
+- Custom DirectMARLEnv: 2v2 hide-and-seek, 24m arena, 4 boxes, 2 ramps
+- IPPO/MAPPO via SKRL, 256 parallel GPU envs, ~15-20 it/s
+- Env: IsaacLab/source/isaaclab_tasks/.../direct/hide_and_seek/
+- CLI: isaac-train, isaac-visual, isaac-stop, isaac-status (~/bin/)
+- Dashboard: hub/32-isaac-training/ (port 8104 monitor API)
+- VNC streaming: x11vnc (5900) + noVNC/websockify (6080)
+- TensorBoard: port 6006
+- Key: always use isaaclab.sh -p, never system python for Isaac
+
+### Service Ports (updated)
+| Service | Port |
+|---------|------|
+| Isaac Monitor | 8104 |
+| noVNC | 6080 |
+| VNC | 5900 |
+| TensorBoard | 6006 |
+
+### Next Steps for Isaac Lab
+1. Complete 25M+ step training, evaluate emergent behaviors
+2. MAPPO comparison run
+3. Add partial observability + box-locking mechanic
+4. Visual upgrade (humanoid USD meshes)
+5. Scale to 512+ envs, record progression videos
