@@ -1,0 +1,1638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🧠 Perception Engine</title>
+<style>
+:root {
+  --bg: #06060e;
+  --surface: #0c0c1a;
+  --surface2: #12122a;
+  --border: #1a1a2e;
+  --border-active: #2a2a4e;
+  --text: #e0e0e8;
+  --text-dim: #666680;
+  --text-muted: #444460;
+  --accent: #7c5cff;
+  --accent-glow: rgba(124,92,255,0.15);
+  --vision: #ff6b6b;
+  --audio: #4ecdc4;
+  --transcript: #ffd93d;
+  --synthesis: #a78bfa;
+  --success: #22c55e;
+  --error: #ef4444;
+  --working: #3b82f6;
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+/* ─── Header ─── */
+.header {
+  padding: 1.25rem 1.5rem 1rem;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(124,92,255,0.03) 0%, transparent 100%);
+}
+.header-left { display: flex; align-items: center; gap: 0.75rem; }
+.back-btn { color: var(--text-dim); text-decoration: none; font-size: 1.2rem; padding: 0.25rem; transition: color 0.2s; }
+.back-btn:hover { color: var(--accent); }
+.header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.5px; }
+.header h1 span { background: linear-gradient(135deg, #7c5cff, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.header .subtitle { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+.status-badge { font-size: 0.7rem; padding: 0.25rem 0.6rem; border-radius: 20px; font-weight: 600; }
+.status-badge.connected { background: rgba(34,197,94,0.15); color: var(--success); }
+.status-badge.disconnected { background: rgba(239,68,68,0.15); color: var(--error); }
+
+/* ─── Layout ─── */
+.main { display: grid; grid-template-columns: 1fr; gap: 0; max-width: 1600px; margin: 0 auto; }
+
+/* ─── Input Section ─── */
+.input-section {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.input-row { display: flex; gap: 0.75rem; align-items: stretch; }
+.source-input {
+  flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 0.75rem 1rem; color: var(--text); font-size: 0.9rem; transition: border-color 0.2s;
+}
+.source-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.source-input::placeholder { color: var(--text-muted); }
+
+.analyze-btn {
+  background: linear-gradient(135deg, #7c5cff, #6d4de6); border: none; border-radius: var(--radius);
+  padding: 0.75rem 1.5rem; color: white; font-size: 0.85rem; font-weight: 600;
+  cursor: pointer; transition: all 0.2s; white-space: nowrap;
+}
+.analyze-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(124,92,255,0.35); }
+.analyze-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.upload-btn {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 0.75rem 1rem; color: var(--text-dim); font-size: 0.85rem; cursor: pointer;
+  transition: all 0.2s; white-space: nowrap;
+}
+.upload-btn:hover { border-color: var(--accent); color: var(--text); }
+.upload-btn input { display: none; }
+
+.config-row {
+  display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; align-items: center;
+}
+.config-chip {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+  padding: 0.3rem 0.7rem; font-size: 0.7rem; color: var(--text-dim);
+  display: flex; align-items: center; gap: 0.3rem; cursor: pointer; transition: all 0.2s;
+}
+.config-chip:hover { border-color: var(--accent); color: var(--text); }
+.config-chip .icon { font-size: 0.8rem; }
+.config-chip select {
+  background: transparent; border: none; color: inherit; font-size: inherit;
+  cursor: pointer; outline: none; appearance: none; padding-right: 0.3rem;
+}
+
+/* ─── Pipeline Progress ─── */
+.pipeline-section {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  display: none;
+}
+.pipeline-section.active { display: block; }
+.pipeline-bar { display: flex; gap: 0.25rem; align-items: center; }
+.pipeline-stage {
+  flex: 1; height: 4px; border-radius: 2px; background: var(--surface2);
+  position: relative; transition: background 0.3s;
+}
+.pipeline-stage.done { background: var(--success); }
+.pipeline-stage.active { background: var(--working); animation: pulse-bar 1.5s ease infinite; }
+.pipeline-stage.failed { background: var(--error); }
+.pipeline-labels { display: flex; justify-content: space-between; margin-top: 0.4rem; }
+.pipeline-label { font-size: 0.6rem; color: var(--text-muted); text-align: center; flex: 1; }
+.pipeline-label.done { color: var(--success); }
+.pipeline-label.active { color: var(--working); font-weight: 600; }
+
+@keyframes pulse-bar { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+/* ─── Swarm Grid ─── */
+.swarm-section {
+  padding: 1rem 1.5rem;
+  display: none;
+}
+.swarm-section.active { display: block; }
+.swarm-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+.swarm-title { font-size: 0.85rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+.swarm-stats { font-size: 0.75rem; color: var(--text-muted); }
+.swarm-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.75rem;
+}
+
+/* ─── Worker Card ─── */
+.worker-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 0.75rem; transition: all 0.3s; position: relative; overflow: hidden;
+}
+.worker-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--border); transition: background 0.3s;
+}
+.worker-card.vision::before { background: var(--vision); }
+.worker-card.audio::before { background: var(--audio); }
+.worker-card.transcript::before { background: var(--transcript); }
+.worker-card.synthesis::before { background: var(--synthesis); }
+.worker-card.working { border-color: var(--border-active); }
+.worker-card.done { opacity: 0.7; }
+.worker-card.error { border-color: rgba(239,68,68,0.3); }
+
+.worker-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+.worker-name { font-size: 0.8rem; font-weight: 600; }
+.worker-state {
+  font-size: 0.6rem; padding: 0.15rem 0.5rem; border-radius: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.worker-state.idle { background: rgba(100,100,120,0.15); color: var(--text-muted); }
+.worker-state.working { background: rgba(59,130,246,0.15); color: var(--working); animation: pulse-state 1.5s ease infinite; }
+.worker-state.digesting { background: rgba(168,139,250,0.15); color: var(--synthesis); }
+.worker-state.done { background: rgba(34,197,94,0.1); color: var(--success); }
+.worker-state.error { background: rgba(239,68,68,0.1); color: var(--error); }
+
+@keyframes pulse-state { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+.worker-meta { font-size: 0.65rem; color: var(--text-muted); margin-bottom: 0.4rem; }
+.worker-progress { height: 3px; background: var(--surface2); border-radius: 2px; margin-bottom: 0.5rem; overflow: hidden; }
+.worker-progress-bar { height: 100%; border-radius: 2px; transition: width 0.3s; }
+.worker-card.vision .worker-progress-bar { background: var(--vision); }
+.worker-card.audio .worker-progress-bar { background: var(--audio); }
+.worker-card.transcript .worker-progress-bar { background: var(--transcript); }
+.worker-card.synthesis .worker-progress-bar { background: var(--synthesis); }
+
+.worker-output {
+  font-size: 0.72rem; color: var(--text-dim); line-height: 1.4;
+  max-height: 80px; overflow-y: auto; font-family: 'SF Mono', 'Fira Code', monospace;
+  background: rgba(0,0,0,0.2); border-radius: var(--radius-sm); padding: 0.4rem 0.5rem;
+  word-break: break-word;
+}
+.worker-output::-webkit-scrollbar { width: 3px; }
+.worker-output::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ─── Results Section ─── */
+.results-section {
+  padding: 1.25rem 1.5rem;
+  display: none;
+}
+.results-section.active { display: block; }
+
+.results-tabs { display: flex; gap: 0.25rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+.results-tab {
+  padding: 0.4rem 0.8rem; font-size: 0.75rem; color: var(--text-muted);
+  cursor: pointer; border-radius: var(--radius-sm); transition: all 0.2s;
+}
+.results-tab:hover { color: var(--text); background: var(--surface); }
+.results-tab.active { color: var(--accent); background: var(--accent-glow); font-weight: 600; }
+
+.results-content {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 1.25rem; max-height: 60vh; overflow-y: auto; line-height: 1.6;
+  font-size: 0.85rem;
+}
+.results-content::-webkit-scrollbar { width: 5px; }
+.results-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+.results-content h1 { font-size: 1.3rem; margin-bottom: 0.5rem; color: var(--accent); }
+.results-content h2 { font-size: 1.05rem; margin: 1rem 0 0.4rem; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+.results-content h3 { font-size: 0.9rem; margin: 0.75rem 0 0.3rem; color: var(--text-dim); }
+.results-content strong { color: var(--text); }
+.results-content ul { padding-left: 1.2rem; }
+.results-content li { margin-bottom: 0.3rem; }
+.results-content code { background: var(--surface2); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.8rem; }
+
+.export-bar { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+.export-btn {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 0.4rem 0.8rem; color: var(--text-dim); font-size: 0.75rem; cursor: pointer;
+  transition: all 0.2s;
+}
+.export-btn:hover { color: var(--text); border-color: var(--accent); }
+
+/* ─── Jobs History ─── */
+.history-section {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border);
+}
+.history-title { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px; }
+.history-list { display: flex; flex-direction: column; gap: 0.4rem; }
+.history-item {
+  display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.75rem;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  cursor: pointer; transition: all 0.2s; font-size: 0.8rem;
+}
+.history-item:hover { border-color: var(--accent); }
+.history-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.history-dot.completed { background: var(--success); }
+.history-dot.analyzing, .history-dot.perceiving, .history-dot.started { background: var(--working); animation: pulse-state 1.5s ease infinite; }
+.history-dot.failed { background: var(--error); }
+.history-dot.queued { background: var(--text-muted); }
+.history-title-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-meta { color: var(--text-muted); font-size: 0.7rem; white-space: nowrap; }
+
+/* ─── Log Stream ─── */
+.log-section { padding: 0.5rem 1.5rem 1rem; }
+.log-toggle {
+  font-size: 0.7rem; color: var(--text-muted); cursor: pointer; padding: 0.3rem 0;
+  display: flex; align-items: center; gap: 0.3rem;
+}
+.log-toggle:hover { color: var(--text); }
+.log-stream {
+  max-height: 0; overflow: hidden; transition: max-height 0.3s;
+  background: rgba(0,0,0,0.3); border-radius: var(--radius-sm); font-family: monospace;
+  font-size: 0.65rem; color: var(--text-dim); line-height: 1.6;
+}
+.log-stream.open { max-height: 200px; overflow-y: auto; padding: 0.5rem 0.75rem; }
+.log-entry { padding: 0.1rem 0; }
+.log-entry .ts { color: var(--text-muted); }
+
+/* ─── Live Document Stream ─── */
+.live-doc-section {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.live-doc-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;
+}
+.live-doc-title {
+  font-size: 0.85rem; font-weight: 600; color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.live-doc-status {
+  font-size: 0.7rem; color: var(--text-muted); font-style: italic;
+}
+.live-doc-status.streaming {
+  color: var(--success);
+  animation: pulse-state 1.5s ease infinite;
+}
+.live-doc-content {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 1rem 1.25rem; max-height: 400px; overflow-y: auto;
+  font-size: 0.82rem; line-height: 1.65; color: var(--text);
+  scroll-behavior: smooth;
+}
+.live-doc-content::-webkit-scrollbar { width: 5px; }
+.live-doc-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+.live-doc-empty { color: var(--text-muted); font-style: italic; text-align: center; padding: 2rem 0; }
+.live-doc-content h1 { font-size: 1.2rem; color: var(--accent); margin: 0.5rem 0; }
+.live-doc-content h2 { font-size: 1rem; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; margin: 0.75rem 0 0.4rem; }
+.live-doc-content h3 { font-size: 0.9rem; color: var(--text-dim); margin: 0.5rem 0 0.3rem; }
+.live-doc-content strong { color: var(--text); }
+.live-doc-new {
+  animation: flash-new 1s ease-out;
+}
+@keyframes flash-new {
+  0% { background: rgba(124,92,255,0.15); }
+  100% { background: transparent; }
+}
+
+/* ─── RAG Ingestion ─── */
+.rag-status {
+  padding: 0.6rem 1.5rem;
+  background: linear-gradient(90deg, rgba(34,197,94,0.05), rgba(124,92,255,0.05));
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 0.5rem;
+  font-size: 0.75rem; color: var(--success);
+}
+.rag-status.done { color: var(--success); }
+.rag-status.ingesting .rag-icon { animation: pulse-state 1s ease infinite; }
+
+/* ─── Swarm Summary Bar ─── */
+.swarm-summary {
+  display: flex; gap: 1rem; margin-bottom: 0.75rem; flex-wrap: wrap;
+}
+.swarm-sense-group {
+  display: flex; align-items: center; gap: 0.4rem;
+  padding: 0.4rem 0.75rem; border-radius: 20px;
+  font-size: 0.7rem; font-weight: 600;
+}
+.swarm-sense-group.vision { background: rgba(255,107,107,0.1); color: var(--vision); }
+.swarm-sense-group.audio { background: rgba(78,205,196,0.1); color: var(--audio); }
+.swarm-sense-group.transcript { background: rgba(255,217,61,0.1); color: var(--transcript); }
+.swarm-sense-group.synthesis { background: rgba(167,139,250,0.1); color: var(--synthesis); }
+.sense-count { background: rgba(255,255,255,0.1); border-radius: 10px; padding: 0.1rem 0.4rem; font-size: 0.65rem; }
+
+/* ─── Agent Lane Layout ─── */
+.agent-lanes {
+  display: flex; flex-direction: column; gap: 0.5rem;
+}
+.agent-lane {
+  display: flex; align-items: stretch; gap: 0; border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden; background: var(--surface);
+  transition: all 0.3s;
+}
+.agent-lane.working { border-color: var(--border-active); }
+.agent-lane.done { opacity: 0.6; }
+.agent-lane.error { border-color: rgba(239,68,68,0.3); }
+
+.lane-identity {
+  width: 48px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 0.2rem;
+  padding: 0.5rem 0; flex-shrink: 0; position: relative;
+}
+.lane-identity::after {
+  content: ''; position: absolute; right: 0; top: 10%; bottom: 10%;
+  width: 1px; background: var(--border);
+}
+.agent-lane.vision .lane-identity { background: rgba(255,107,107,0.06); }
+.agent-lane.audio .lane-identity { background: rgba(78,205,196,0.06); }
+.agent-lane.transcript .lane-identity { background: rgba(255,217,61,0.06); }
+.agent-lane.synthesis .lane-identity { background: rgba(167,139,250,0.06); }
+
+.lane-avatar {
+  width: 28px; height: 28px; border-radius: 50%; display: flex;
+  align-items: center; justify-content: center; font-size: 0.85rem;
+}
+.agent-lane.vision .lane-avatar { background: rgba(255,107,107,0.15); }
+.agent-lane.audio .lane-avatar { background: rgba(78,205,196,0.15); }
+.agent-lane.transcript .lane-avatar { background: rgba(255,217,61,0.15); }
+.agent-lane.synthesis .lane-avatar { background: rgba(167,139,250,0.15); }
+
+.agent-lane.working .lane-avatar { animation: bob 2s ease-in-out infinite; }
+@keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+
+.lane-state-dot {
+  width: 6px; height: 6px; border-radius: 50%; margin-top: 0.2rem;
+}
+.agent-lane.idle .lane-state-dot { background: var(--text-muted); }
+.agent-lane.working .lane-state-dot { background: var(--working); animation: pulse-state 1.5s ease infinite; }
+.agent-lane.done .lane-state-dot { background: var(--success); }
+.agent-lane.error .lane-state-dot { background: var(--error); }
+
+.lane-body {
+  flex: 1; padding: 0.5rem 0.75rem; display: flex; flex-direction: column;
+  justify-content: center; min-width: 0;
+}
+.lane-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 0.25rem;
+}
+.lane-name { font-size: 0.75rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lane-meta { font-size: 0.6rem; color: var(--text-muted); }
+.lane-progress {
+  height: 3px; background: var(--surface2); border-radius: 2px;
+  margin-bottom: 0.35rem; overflow: hidden;
+}
+.lane-progress-bar { height: 100%; border-radius: 2px; transition: width 0.3s; }
+.agent-lane.vision .lane-progress-bar { background: var(--vision); }
+.agent-lane.audio .lane-progress-bar { background: var(--audio); }
+.agent-lane.transcript .lane-progress-bar { background: var(--transcript); }
+.agent-lane.synthesis .lane-progress-bar { background: var(--synthesis); }
+
+.lane-output {
+  font-size: 0.7rem; color: var(--text-dim); line-height: 1.4;
+  max-height: 60px; overflow-y: auto; font-family: 'SF Mono', 'Fira Code', monospace;
+  word-break: break-word;
+}
+.lane-output::-webkit-scrollbar { width: 2px; }
+.lane-output::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* Group toggle */
+.sense-group-toggle {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.4rem 0.75rem; cursor: pointer; border-radius: var(--radius-sm);
+  background: var(--surface); border: 1px solid var(--border);
+  margin-bottom: 0.5rem; transition: all 0.2s;
+}
+.sense-group-toggle:hover { border-color: var(--accent); }
+.sense-group-toggle .toggle-arrow { transition: transform 0.2s; font-size: 0.6rem; color: var(--text-muted); }
+.sense-group-toggle .toggle-arrow.open { transform: rotate(90deg); }
+.sense-group-toggle .group-label { font-size: 0.75rem; font-weight: 600; }
+.sense-group-toggle .group-stats { font-size: 0.65rem; color: var(--text-muted); margin-left: auto; }
+
+/* ─── Legacy worker-card (kept for backward compat) ─── */
+.worker-card { display: none; }
+
+/* ─── Empty State ─── */
+.empty-state {
+  text-align: center; padding: 4rem 2rem; color: var(--text-muted);
+}
+.empty-state .icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.3; }
+.empty-state p { font-size: 0.85rem; max-width: 400px; margin: 0 auto; line-height: 1.5; }
+
+/* ─── Mobile ─── */
+@media (max-width: 768px) {
+  .header { padding: 1rem; }
+  .header h1 { font-size: 1.1rem; }
+  .input-section { padding: 1rem; }
+  .input-row { flex-direction: column; }
+  .agent-lanes { gap: 0.35rem; }
+  .lane-identity { width: 40px; }
+  .swarm-summary { gap: 0.5rem; }
+  .config-row { gap: 0.3rem; }
+  .pipeline-labels { display: none; }
+  .results-section, .swarm-section, .history-section, .log-section { padding-left: 1rem; padding-right: 1rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <a href="../" class="back-btn">←</a>
+    <div>
+      <h1>🧠 <span>Perception Engine</span></h1>
+      <div class="subtitle">Multi-sensory video understanding</div>
+    </div>
+  </div>
+  <span id="wsStatus" class="status-badge disconnected">● disconnected</span>
+</div>
+
+<!-- Content Type Selector -->
+<div style="background:var(--surface);padding:8px 16px;display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;border-bottom:1px solid var(--border)">
+  <button class="content-type-btn active" onclick="setContentType('video',this)" style="padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:var(--accent);color:#fff;font-size:12px;cursor:pointer;white-space:nowrap">🎬 Video</button>
+  <button class="content-type-btn" onclick="setContentType('url',this)" style="padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:12px;cursor:pointer;white-space:nowrap">🌐 URL / Website</button>
+  <button class="content-type-btn" onclick="setContentType('text',this)" style="padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:12px;cursor:pointer;white-space:nowrap">📝 Text</button>
+  <button class="content-type-btn" onclick="setContentType('image',this)" style="padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:12px;cursor:pointer;white-space:nowrap">🖼️ Image</button>
+  <button class="content-type-btn" onclick="setContentType('repo',this)" style="padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:12px;cursor:pointer;white-space:nowrap">📦 Repo</button>
+  <button class="content-type-btn" onclick="setContentType('paper',this)" style="padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:12px;cursor:pointer;white-space:nowrap">📄 Paper</button>
+</div>
+
+<!-- Universal Input -->
+<div class="input-section">
+  <!-- Text area for text/paste content -->
+  <div id="textInputArea" style="display:none;margin-bottom:8px">
+    <textarea id="textContent" style="width:100%;min-height:120px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:13px;resize:vertical" placeholder="Paste text content here..."></textarea>
+  </div>
+  <div class="input-row">
+    <input type="text" id="sourceInput" class="source-input"
+           placeholder="YouTube URL, website URL, image URL, or arxiv link..."
+           onkeydown="if(event.key==='Enter')startSmartAnalysis()">
+    <label class="upload-btn" title="Upload file">
+      📁 Upload
+      <input type="file" id="fileUpload" accept=".mp4,.mkv,.avi,.webm,.mov,.m4v,.jpg,.png,.gif,.pdf,.txt,.md" onchange="uploadFile(this)">
+    </label>
+    <button class="analyze-btn" id="analyzeBtn" onclick="startSmartAnalysis()">⚡ Analyze</button>
+  </div>
+  <!-- Options row -->
+  <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+    <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text-muted);cursor:pointer">
+      <input type="checkbox" id="optDeepResearch" style="accent-color:var(--accent)"> 🔍 Deep Research
+    </label>
+    <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text-muted);cursor:pointer">
+      <input type="checkbox" id="optVoiceMemo" style="accent-color:var(--accent)"> 🎙️ Voice Memo
+    </label>
+    <select id="optModel" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:3px 6px;color:var(--text);font-size:11px">
+      <option value="qwen3.5:4b">Qwen 3.5 4B</option>
+      <option value="qwen3.5:0.8b">Qwen 3.5 0.8B (fast)</option>
+      <option value="qwen3:8b">Qwen 3 8B</option>
+      <option value="qwen3:14b">Qwen 3 14B (smart)</option>
+    </select>
+  </div>
+  <div class="config-row">
+    <div class="config-chip"><span class="icon">👁️</span> Vision: <select id="cfgVision"></select></div>
+    <div class="config-chip"><span class="icon">👂</span> Audio: <select id="cfgAudio"></select></div>
+    <div class="config-chip"><span class="icon">📝</span> Transcript: <select id="cfgTranscript"></select></div>
+    <div class="config-chip"><span class="icon">🧠</span> Synthesis: <select id="cfgSynthesis"></select></div>
+    <div class="config-chip"><span class="icon">🎙️</span> Whisper: <select id="cfgWhisper"><option>tiny</option><option>small</option><option>medium</option><option>large</option></select></div>
+    <div class="config-chip"><span class="icon">⏱️</span> Frames: <select id="cfgInterval">
+      <option value="0.0083">120 fps</option>
+      <option value="0.0167">60 fps</option>
+      <option value="0.0333">30 fps</option>
+      <option value="0.1">10 fps</option>
+      <option value="0.2">5 fps</option>
+      <option value="0.5">2 fps</option>
+      <option value="1">1 fps</option>
+      <option value="2">Every 2s</option>
+      <option value="5">Every 5s</option>
+      <option value="10">Every 10s</option>
+      <option value="15" selected>Every 15s</option>
+      <option value="30">Every 30s</option>
+      <option value="60">Every 60s</option>
+    </select></div>
+    <div class="config-chip"><span class="icon">🖼️</span> Max frames: <select id="cfgMaxFrames">
+      <option value="60">60</option>
+      <option value="120" selected>120</option>
+      <option value="300">300</option>
+      <option value="600">600</option>
+      <option value="1000">1,000</option>
+      <option value="3000">3,000</option>
+      <option value="10000">10,000</option>
+      <option value="0">Unlimited</option>
+    </select></div>
+  </div>
+  <div class="config-row" style="margin-top:0.5rem; align-items:center;">
+    <div class="config-chip" style="flex:1; max-width: 500px; padding:0.5rem 0.75rem;">
+      <span class="icon">🐝</span>
+      <span style="white-space:nowrap">Workers: <strong id="workerCountLabel">3</strong></span>
+      <input type="range" id="workerSlider" min="1" max="50" value="3"
+             style="flex:1; margin:0 0.5rem; accent-color:var(--accent); cursor:pointer;"
+             oninput="updateWorkerLabel()">
+      <span id="workerMax" style="font-size:0.65rem; color:var(--text-muted)">max: ?</span>
+    </div>
+    <div id="capacityInfo" class="config-chip" style="font-size:0.65rem; gap:0.4rem;">
+      <span id="capRAM">RAM: ?</span>
+      <span style="color:var(--text-muted)">·</span>
+      <span id="capThroughput">~? tok/s</span>
+      <span style="color:var(--text-muted)">·</span>
+      <span id="capNote"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Pipeline Progress -->
+<div class="pipeline-section" id="pipelineSection">
+  <div class="pipeline-bar" id="pipelineBar"></div>
+  <div class="pipeline-labels" id="pipelineLabels"></div>
+</div>
+
+<!-- Swarm Grid -->
+<div class="swarm-section" id="swarmSection">
+  <div class="swarm-header">
+    <span class="swarm-title">🐝 Swarm Workers</span>
+    <span class="swarm-stats" id="swarmStats"></span>
+  </div>
+  <div class="swarm-summary" id="swarmSummary"></div>
+  <div class="agent-lanes" id="swarmGrid"></div>
+</div>
+
+<!-- Live Document Stream -->
+<div class="live-doc-section" id="liveDocSection" style="display:none">
+  <div class="live-doc-header">
+    <span class="live-doc-title">📝 Live Document</span>
+    <span class="live-doc-status" id="liveDocStatus">waiting...</span>
+  </div>
+  <div class="live-doc-content" id="liveDocContent">
+    <div class="live-doc-empty">Understanding will appear here as workers complete their analysis...</div>
+  </div>
+</div>
+
+<!-- RAG Ingestion Status -->
+<div class="rag-status" id="ragStatus" style="display:none">
+  <span class="rag-icon">📚</span>
+  <span class="rag-text" id="ragText">Ingesting into knowledge store...</span>
+</div>
+
+<!-- Log Stream -->
+<div class="log-section" id="logSection" style="display:none">
+  <div class="log-toggle" onclick="toggleLog()">▶ Activity Log</div>
+  <div class="log-stream" id="logStream"></div>
+</div>
+
+<!-- Results -->
+<div class="results-section" id="resultsSection">
+  <div class="results-tabs">
+    <div class="results-tab active" onclick="showTab('summary')">Summary</div>
+    <div class="results-tab" onclick="showTab('understanding')">Full Understanding</div>
+    <div class="results-tab" onclick="showTab('vision')">👁️ Vision</div>
+    <div class="results-tab" onclick="showTab('audio')">👂 Audio</div>
+  </div>
+  <div class="results-content" id="resultsContent"></div>
+  <div class="export-bar">
+    <button class="export-btn" onclick="exportResults('md')">📄 Export Markdown</button>
+    <button class="export-btn" onclick="exportResults('json')">📋 Copy JSON</button>
+  </div>
+</div>
+
+<!-- History -->
+<div class="history-section" id="historySection">
+  <div class="history-title">Recent Analyses</div>
+  <div class="history-list" id="historyList"></div>
+</div>
+
+<!-- Empty State -->
+<div class="empty-state" id="emptyState">
+  <div class="icon">🧠</div>
+  <p>Paste a YouTube URL, upload a video, or provide a local path.<br>
+  The swarm will see, hear, and understand everything in it.</p>
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+const API = `http://${window.location.hostname}:8099`;
+let socket = null;
+let currentJobId = localStorage.getItem('pe_activeJob') || null;
+let currentJobData = null;
+let logEntries = [];
+let activeContentType = 'video';
+
+// Content type switching
+function setContentType(type, btn) {
+  activeContentType = type;
+  document.querySelectorAll('.content-type-btn').forEach(b => {
+    b.style.background = 'transparent';
+    b.style.color = 'var(--text-muted)';
+  });
+  if (btn) {
+    btn.style.background = 'var(--accent)';
+    btn.style.color = '#fff';
+  }
+  
+  const input = document.getElementById('sourceInput');
+  const textArea = document.getElementById('textInputArea');
+  
+  const placeholders = {
+    video: 'YouTube URL, local path, or drop a video file...',
+    url: 'Website URL to analyze (e.g. https://example.com/article)...',
+    text: 'Paste content below, or enter a URL...',
+    image: 'Image URL (jpg, png, gif, webp)...',
+    repo: 'GitHub repo URL (e.g. https://github.com/user/repo)...',
+    paper: 'Arxiv URL, PDF link, or DOI...'
+  };
+  
+  input.placeholder = placeholders[type] || placeholders.video;
+  textArea.style.display = type === 'text' ? 'block' : 'none';
+}
+
+// Smart analysis — routes to video or ingest API based on content type
+async function startSmartAnalysis() {
+  const input = document.getElementById('sourceInput').value.trim();
+  const textContent = document.getElementById('textContent')?.value?.trim();
+  
+  if (activeContentType === 'video' || 
+      (activeContentType === 'video' && input.includes('youtube.com')) ||
+      (activeContentType === 'video' && input.includes('youtu.be'))) {
+    // Use existing video analysis
+    startAnalysis();
+    return;
+  }
+  
+  // Use new universal ingest API
+  const content = activeContentType === 'text' ? (textContent || input) : input;
+  if (!content) return;
+  
+  const deepResearch = document.getElementById('optDeepResearch')?.checked || false;
+  const voiceMemo = document.getElementById('optVoiceMemo')?.checked || false;
+  const model = document.getElementById('optModel')?.value || 'qwen3.5:4b';
+  
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Processing...';
+  
+  try {
+    const resp = await fetch(`${API}/api/ingest`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        type: activeContentType,
+        content: content,
+        deep_research: deepResearch,
+        voice_memo: voiceMemo,
+        model: model
+      })
+    });
+    const data = await resp.json();
+    
+    if (data.job_id) {
+      // Show immediate feedback
+      const resultArea = document.createElement('div');
+      resultArea.id = 'ingest-result-' + data.job_id;
+      resultArea.innerHTML = `
+        <div style="background:var(--surface,#12121a);border:1px solid var(--border,#1e1e2e);border-radius:10px;padding:16px;margin:12px 0">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <div style="width:10px;height:10px;border-radius:50%;background:#6c8aff;animation:pulse 1.5s infinite"></div>
+            <span style="font-size:14px;font-weight:600">Processing ${data.type}...</span>
+          </div>
+          <div id="ingest-steps-${data.job_id}" style="font-size:12px;color:#888"></div>
+          <div id="ingest-summary-${data.job_id}" style="display:none;margin-top:12px;font-size:13px;line-height:1.6;white-space:pre-wrap"></div>
+          <div id="ingest-voice-${data.job_id}" style="display:none;margin-top:8px"></div>
+        </div>`;
+      document.querySelector('.input-section').after(resultArea);
+      
+      // Poll for results
+      pollIngestJob(data.job_id);
+    }
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '⚡ Analyze';
+    // Show error inline
+    const errDiv = document.createElement('div');
+    errDiv.innerHTML = `<div style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);border-radius:8px;padding:12px;margin:12px 0;font-size:13px;color:#f87171">Error: ${e.message}</div>`;
+    document.querySelector('.input-section').after(errDiv);
+  }
+}
+
+async function pollIngestJob(jobId) {
+  const btn = document.getElementById('analyzeBtn');
+  
+  for (let i = 0; i < 120; i++) {  // Max 10 min polling
+    await new Promise(r => setTimeout(r, 5000));
+    
+    try {
+      const resp = await fetch(`${API}/api/ingest/${jobId}`);
+      const data = await resp.json();
+      // Render swarm workers if available
+      const workers = data.workers || [];
+      const stepsEl = document.getElementById('ingest-steps-' + jobId);
+      
+      if (workers.length > 0) {
+        // Group workers by sense type
+        const senseGroups = {};
+        const senseIcons = {fetch:'📥',parse:'🔍',analysis:'🧠',reference:'🔗',synthesis:'🧬',voice:'🎙️'};
+        const senseColors = {fetch:'#6c8aff',parse:'#facc15',analysis:'#4ade80',reference:'#fb923c',synthesis:'#c084fc',voice:'#f472b6'};
+        
+        workers.forEach(w => {
+          const sense = w.sense || 'other';
+          if (!senseGroups[sense]) senseGroups[sense] = [];
+          senseGroups[sense].push(w);
+        });
+        
+        const activeCount = workers.filter(w => w.state === 'working').length;
+        const doneCount = workers.filter(w => w.state === 'done').length;
+        
+        let html = `<div style="margin-bottom:8px;font-size:12px;color:var(--dim,#888)">
+          <span style="color:var(--accent,#6c8aff);font-weight:600">🐝 SWARM WORKERS</span>
+          <span style="float:right">${activeCount} active · ${doneCount}/${workers.length} done</span>
+        </div>`;
+        
+        // Sense group badges
+        html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">';
+        for (const [sense, group] of Object.entries(senseGroups)) {
+          const done = group.filter(w => w.state === 'done').length;
+          const color = senseColors[sense] || '#888';
+          html += `<span style="padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;border:1px solid ${color};color:${color}">${senseIcons[sense]||'⚙️'} ${sense} ${done}/${group.length}</span>`;
+        }
+        html += '</div>';
+        
+        // Individual worker cards
+        for (const [sense, group] of Object.entries(senseGroups)) {
+          const color = senseColors[sense] || '#888';
+          html += `<div style="margin-bottom:6px">`;
+          for (const w of group) {
+            const stateIcon = w.state === 'done' ? '🟢' : w.state === 'working' ? '🔵' : w.state === 'error' ? '🔴' : '⚪';
+            const resultPreview = w.result ? w.result.substring(0, 200) + (w.result.length > 200 ? '...' : '') : w.error || '';
+            
+            // Check if this worker has an associated image (vision workers store path in chunk_label)
+            const hasImage = w.sense === 'vision' && w.chunk_label && w.chunk_label.includes('/images/');
+            const imgName = hasImage ? w.chunk_label.split('/images/').pop() : '';
+            const jobId = data.id || '';
+            
+            html += `<div style="background:rgba(${color === '#4ade80' ? '74,222,128' : color === '#6c8aff' ? '108,138,255' : '200,200,200'},0.06);border:1px solid rgba(${color === '#4ade80' ? '74,222,128' : color === '#6c8aff' ? '108,138,255' : '200,200,200'},0.15);border-radius:8px;padding:8px 10px;margin-bottom:4px">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="font-size:12px;font-weight:600">${senseIcons[sense]||'⚙️'} ${w.name}</span>
+                <span style="font-size:11px;color:var(--dim,#888)">${stateIcon} ${w.state}${w.model ? ' · '+w.model : ''}</span>
+              </div>
+              ${hasImage && jobId ? `<div style="margin-top:6px"><img src="${API}/api/ingest/${jobId}/image/${imgName}" style="max-width:100%;max-height:200px;border-radius:6px;border:1px solid rgba(255,255,255,0.1)" onerror="this.style.display='none'" /></div>` : ''}
+              ${resultPreview ? `<div style="font-size:11px;color:var(--dim,#888);margin-top:4px;line-height:1.4">${resultPreview}</div>` : ''}
+            </div>`;
+          }
+          html += '</div>';
+        }
+        
+        if (stepsEl) stepsEl.innerHTML = html;
+      } else if (stepsEl && data.steps) {
+        stepsEl.innerHTML = data.steps.map(s => 
+          `<div style="margin:2px 0">✓ ${s.step} <span style="color:#555">${s.time}</span></div>`
+        ).join('');
+      }
+      
+      btn.textContent = `⏳ ${data.status || 'processing'}`;
+      
+      if (data.status === 'complete' || data.status === 'failed') {
+        btn.disabled = false;
+        btn.textContent = '⚡ Analyze';
+        
+        // Update the result area
+        const resultEl = document.getElementById('ingest-result-' + jobId);
+        if (resultEl) {
+          const dot = resultEl.querySelector('div[style*="border-radius:50%"]');
+          if (dot) dot.style.background = data.status === 'complete' ? '#4ade80' : '#f87171';
+          const title = resultEl.querySelector('span[style*="font-weight:600"]');
+          if (title) title.textContent = data.status === 'complete' ? '✅ Analysis Complete' : '❌ Failed';
+        }
+        
+        if (data.summary) {
+          const summaryEl = document.getElementById('ingest-summary-' + jobId);
+          if (summaryEl) {
+            summaryEl.style.display = 'block';
+            summaryEl.textContent = data.summary;
+          }
+        }
+        
+        if (data.voice_memo_url) {
+          const voiceEl = document.getElementById('ingest-voice-' + jobId);
+          if (voiceEl) {
+            voiceEl.style.display = 'block';
+            voiceEl.innerHTML = `<audio controls src="${API}${data.voice_memo_url}" style="width:100%"></audio><div style="font-size:11px;color:#888">🎙️ Voice memo</div>`;
+          }
+        }
+        return;
+      }
+      
+      if (data.status === 'delegated') {
+        btn.disabled = false;
+        btn.textContent = '⚡ Analyze';
+        const resultEl = document.getElementById('ingest-result-' + jobId);
+        if (resultEl) {
+          const title = resultEl.querySelector('span[style*="font-weight:600"]');
+          if (title) title.textContent = '🎬 Video analysis started — check results below';
+        }
+        return;
+      }
+    } catch(e) {}
+  }
+  
+  btn.disabled = false;
+  btn.textContent = '⚡ Analyze';
+}
+let activeTab = 'summary';
+
+// ─── WebSocket ───
+function connectWS() {
+  try {
+    // If socket already exists, just reconnect — don't create a new instance
+    if (socket) {
+      if (!socket.connected) socket.connect();
+      return;
+    }
+    socket = io(API, {
+      transports: ['websocket', 'polling'],
+      reconnection: true,           // Let Socket.IO handle reconnects natively
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 10000,
+      timeout: 10000
+    });
+    socket.on('connect', () => {
+      document.getElementById('wsStatus').className = 'status-badge connected';
+      document.getElementById('wsStatus').textContent = '● live';
+      if (currentJobId) socket.emit('subscribe_job', { job_id: currentJobId });
+    });
+    socket.on('disconnect', () => {
+      document.getElementById('wsStatus').className = 'status-badge disconnected';
+      document.getElementById('wsStatus').textContent = '● disconnected';
+      // Socket.IO's built-in reconnection handles retry — no manual setTimeout needed
+    });
+    // Swarm events
+    socket.on('worker_updated', handleWorkerUpdate);
+    socket.on('stage_updated', handleStageUpdate);
+    socket.on('job_progress', handleJobProgress);
+    socket.on('job_completed', handleJobCompleted);
+    socket.on('job_failed', handleJobFailed);
+    socket.on('worker_log', handleWorkerLog);
+    socket.on('swarm_event', (d) => {
+      addLog(d.type, JSON.stringify(d.data).slice(0, 120));
+    });
+  } catch(e) {
+    console.error('WS connect failed:', e);
+    // Fall back to polling
+    setInterval(pollJob, 3000);
+  }
+}
+
+// ─── iOS/mobile: reconnect when page becomes visible again ───
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && socket && !socket.connected) {
+    socket.connect();
+  }
+});
+
+// ─── Start Analysis ───
+async function startAnalysis() {
+  const source = document.getElementById('sourceInput').value.trim();
+  if (!source) return;
+
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Starting...';
+
+  try {
+    const resp = await fetch(`${API}/api/swarm/analyze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        source,
+        vision_model: document.getElementById('cfgVision').value,
+        audio_model: document.getElementById('cfgAudio').value,
+        transcript_model: document.getElementById('cfgTranscript').value,
+        synthesis_model: document.getElementById('cfgSynthesis').value,
+        whisper_model: document.getElementById('cfgWhisper').value,
+        frame_interval: parseFloat(document.getElementById('cfgInterval').value),
+        max_frames: parseInt(document.getElementById('cfgMaxFrames').value) || 999999,
+        max_vision_workers: parseInt(document.getElementById('workerSlider').value),
+        max_audio_workers: Math.max(2, Math.floor(parseInt(document.getElementById('workerSlider').value) / 3)),
+        max_transcript_workers: Math.max(2, Math.floor(parseInt(document.getElementById('workerSlider').value) / 2)),
+      })
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+
+    currentJobId = data.job_id;
+    localStorage.setItem('pe_activeJob', currentJobId);
+    showSwarmUI();
+    if (socket && socket.connected) {
+      socket.emit('subscribe_job', { job_id: currentJobId });
+    }
+    startPolling();
+    addLog('system', `Analysis started: ${currentJobId}`);
+
+  } catch(e) {
+    alert('Error: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚡ Analyze';
+  }
+}
+
+// ─── Upload ───
+async function uploadFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Uploading...';
+
+  // Check if non-video file
+  const ext = file.name.split('.').pop().toLowerCase();
+  const nonVideoExts = ['pdf','txt','md','rst','html','jpg','jpeg','png','gif','webp'];
+  
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('vision_model', document.getElementById('cfgVision')?.value || 'qwen3.5:4b');
+    
+    if (!nonVideoExts.includes(ext)) {
+      // Video file — add video-specific config
+      formData.append('audio_model', document.getElementById('cfgAudio')?.value || 'qwen3.5:0.8b');
+      formData.append('transcript_model', document.getElementById('cfgTranscript')?.value || 'qwen3.5:0.8b');
+      formData.append('synthesis_model', document.getElementById('cfgSynthesis')?.value || 'qwen3.5:2b');
+      formData.append('whisper_model', document.getElementById('cfgWhisper')?.value || 'tiny');
+      formData.append('frame_interval', document.getElementById('cfgInterval')?.value || '15');
+      formData.append('max_frames', document.getElementById('cfgMaxFrames')?.value || '120');
+    }
+
+    const resp = await fetch(`${API}/api/upload`, { method: 'POST', body: formData });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    
+    // Non-video files go to ingest pipeline
+    if (nonVideoExts.includes(ext) && data.job_id?.startsWith('ingest-')) {
+      btn.textContent = '⏳ Processing...';
+      pollIngestJob(data.job_id);
+      return;
+    }
+
+    currentJobId = data.job_id;
+    localStorage.setItem('pe_activeJob', currentJobId);
+    showSwarmUI();
+    if (socket && socket.connected) {
+      socket.emit('subscribe_job', { job_id: currentJobId });
+    }
+    startPolling();
+    addLog('system', `Upload started: ${file.name}`);
+
+  } catch(e) {
+    alert('Error: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚡ Analyze';
+    input.value = '';
+  }
+}
+
+// ─── UI State ───
+function showSwarmUI() {
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('pipelineSection').classList.add('active');
+  document.getElementById('swarmSection').classList.add('active');
+  document.getElementById('liveDocSection').style.display = 'block';
+  document.getElementById('logSection').style.display = 'block';
+  document.getElementById('resultsSection').classList.remove('active');
+  document.getElementById('ragStatus').style.display = 'none';
+  // Reset live doc
+  liveDocEntries = new Set();
+  document.getElementById('liveDocContent').innerHTML = '<div class="live-doc-empty">Understanding will appear here as workers complete their analysis...</div>';
+  document.getElementById('liveDocStatus').textContent = 'waiting...';
+  document.getElementById('liveDocStatus').className = 'live-doc-status';
+}
+
+// ─── Pipeline Rendering ───
+function renderPipeline(stages) {
+  if (!stages || !stages.length) return;
+  const bar = document.getElementById('pipelineBar');
+  const labels = document.getElementById('pipelineLabels');
+  bar.innerHTML = '';
+  labels.innerHTML = '';
+  stages.forEach(s => {
+    const div = document.createElement('div');
+    div.className = `pipeline-stage ${s.status}`;
+    bar.appendChild(div);
+    const lbl = document.createElement('div');
+    lbl.className = `pipeline-label ${s.status}`;
+    lbl.textContent = s.label;
+    labels.appendChild(lbl);
+  });
+}
+
+// ─── Worker Card Rendering ───
+const SENSE_EMOJI = { vision: '👁️', audio: '👂', transcript: '📝', synthesis: '🧠' };
+const SENSE_LABEL = { vision: 'Vision', audio: 'Audio', transcript: 'Transcript', synthesis: 'Synthesis' };
+let collapsedGroups = new Set();
+
+function renderWorkers(workers) {
+  if (!workers || !workers.length) return;
+  const grid = document.getElementById('swarmGrid');
+  const summary = document.getElementById('swarmSummary');
+
+  // Group workers by sense type
+  const groups = {};
+  workers.forEach(w => {
+    if (!groups[w.sense]) groups[w.sense] = [];
+    groups[w.sense].push(w);
+  });
+
+  // Render summary chips
+  summary.innerHTML = '';
+  const order = ['vision', 'audio', 'transcript', 'synthesis'];
+  order.forEach(sense => {
+    const grp = groups[sense] || [];
+    if (!grp.length) return;
+    const active = grp.filter(w => w.state === 'working').length;
+    const done = grp.filter(w => w.state === 'done').length;
+    const chip = document.createElement('div');
+    chip.className = `swarm-sense-group ${sense}`;
+    chip.innerHTML = `${SENSE_EMOJI[sense]} ${SENSE_LABEL[sense]} <span class="sense-count">${active > 0 ? active + ' active · ' : ''}${done}/${grp.length}</span>`;
+    summary.appendChild(chip);
+  });
+
+  // Render lanes grouped by sense
+  order.forEach(sense => {
+    const grp = groups[sense] || [];
+    if (!grp.length) return;
+
+    // Ensure group toggle exists
+    let toggle = document.getElementById(`group-toggle-${sense}`);
+    if (!toggle) {
+      toggle = document.createElement('div');
+      toggle.id = `group-toggle-${sense}`;
+      toggle.className = 'sense-group-toggle';
+      toggle.onclick = () => toggleGroup(sense);
+      grid.appendChild(toggle);
+    }
+    const active = grp.filter(w => w.state === 'working').length;
+    const done = grp.filter(w => w.state === 'done').length;
+    const isOpen = !collapsedGroups.has(sense);
+    toggle.innerHTML = `
+      <span class="toggle-arrow ${isOpen ? 'open' : ''}">▶</span>
+      <span class="group-label">${SENSE_EMOJI[sense]} ${SENSE_LABEL[sense]}</span>
+      <span class="group-stats">${active > 0 ? active + ' working · ' : ''}${done}/${grp.length} done</span>
+    `;
+
+    // Sort: working first, then idle, then done
+    const stateOrder = { working: 0, idle: 1, digesting: 1, done: 2, error: 3 };
+    grp.sort((a, b) => (stateOrder[a.state] || 9) - (stateOrder[b.state] || 9));
+
+    grp.forEach(w => {
+      let lane = document.getElementById(`lane-${w.id}`);
+      if (!lane) {
+        lane = document.createElement('div');
+        lane.id = `lane-${w.id}`;
+        lane.className = `agent-lane ${w.sense}`;
+        // Insert after the group toggle
+        let nextGroup = null;
+        const nextSenseIdx = order.indexOf(sense) + 1;
+        if (nextSenseIdx < order.length) {
+          nextGroup = document.getElementById(`group-toggle-${order[nextSenseIdx]}`);
+        }
+        if (nextGroup) {
+          grid.insertBefore(lane, nextGroup);
+        } else {
+          grid.appendChild(lane);
+        }
+      }
+
+      lane.className = `agent-lane ${w.sense} ${w.state}`;
+      lane.style.display = isOpen ? 'flex' : 'none';
+
+      const elapsed = w.started_at && w.state === 'working'
+        ? `${((Date.now()/1000 - w.started_at) | 0)}s`
+        : w.finished_at && w.started_at
+          ? `${((w.finished_at - w.started_at) | 0)}s`
+          : '';
+
+      const emoji = SENSE_EMOJI[w.sense] || '🤖';
+      const outputText = w.current_text || w.result || w.error || '...';
+
+      lane.innerHTML = `
+        <div class="lane-identity">
+          <div class="lane-avatar">${emoji}</div>
+          <div class="lane-state-dot"></div>
+        </div>
+        <div class="lane-body">
+          <div class="lane-header">
+            <span class="lane-name">${esc(w.chunk_label || w.name)}</span>
+            <span class="lane-meta">${esc(w.model)}${elapsed ? ' · ' + elapsed : ''}</span>
+          </div>
+          <div class="lane-progress"><div class="lane-progress-bar" style="width:${w.progress}%"></div></div>
+          <div class="lane-output">${esc(outputText)}</div>
+        </div>
+      `;
+
+      // If this worker just completed, update the live document
+      if (w.state === 'done' && w.current_text && w.current_text.length > 5) {
+        updateLiveDoc(w);
+      }
+    });
+  });
+
+  // Update global stats
+  const allActive = workers.filter(w => w.state === 'working').length;
+  const allDone = workers.filter(w => w.state === 'done').length;
+  document.getElementById('swarmStats').textContent = `${allActive} active · ${allDone}/${workers.length} done`;
+}
+
+function toggleGroup(sense) {
+  if (collapsedGroups.has(sense)) {
+    collapsedGroups.delete(sense);
+  } else {
+    collapsedGroups.add(sense);
+  }
+  // Toggle visibility of lanes in this group
+  const grid = document.getElementById('swarmGrid');
+  const lanes = grid.querySelectorAll(`.agent-lane.${sense}`);
+  const isOpen = !collapsedGroups.has(sense);
+  lanes.forEach(l => l.style.display = isOpen ? 'flex' : 'none');
+  // Update toggle arrow
+  const toggle = document.getElementById(`group-toggle-${sense}`);
+  if (toggle) {
+    const arrow = toggle.querySelector('.toggle-arrow');
+    if (arrow) arrow.className = `toggle-arrow ${isOpen ? 'open' : ''}`;
+  }
+}
+
+// ─── Live Document Streaming ───
+let liveDocEntries = new Set();
+
+function updateLiveDoc(worker) {
+  if (liveDocEntries.has(worker.id)) return; // Already added
+  liveDocEntries.add(worker.id);
+
+  const doc = document.getElementById('liveDocContent');
+  const status = document.getElementById('liveDocStatus');
+
+  // Remove empty state
+  const empty = doc.querySelector('.live-doc-empty');
+  if (empty) empty.remove();
+
+  status.textContent = 'streaming...';
+  status.className = 'live-doc-status streaming';
+
+  const entry = document.createElement('div');
+  entry.className = 'live-doc-new';
+
+  const emoji = SENSE_EMOJI[worker.sense] || '🤖';
+  const label = worker.chunk_label || worker.name;
+  entry.innerHTML = `<strong style="color:${getColor(worker.sense)}">${emoji} ${esc(label)}</strong><br>${renderMarkdown(worker.current_text || worker.result || '')}`;
+
+  doc.appendChild(entry);
+  doc.scrollTop = doc.scrollHeight;
+}
+
+function updateLiveDocFromJob(data) {
+  if (!data) return;
+  const doc = document.getElementById('liveDocContent');
+  const status = document.getElementById('liveDocStatus');
+
+  // If we have merged understanding, show it
+  if (data.merged_understanding && data.merged_understanding.length > 10) {
+    doc.innerHTML = renderMarkdown(data.merged_understanding);
+    status.textContent = data.status === 'completed' ? 'complete ✓' : 'building...';
+    status.className = data.status === 'completed' ? 'live-doc-status' : 'live-doc-status streaming';
+    doc.scrollTop = doc.scrollHeight;
+  }
+
+  // Show RAG ingestion status
+  if (data.status === 'completed') {
+    const rag = document.getElementById('ragStatus');
+    rag.style.display = 'flex';
+    rag.className = 'rag-status done';
+    document.getElementById('ragText').textContent = '📚 Ingested into unified knowledge store — searchable by all agents';
+  }
+}
+
+function getColor(sense) {
+  const colors = { vision: '#ff6b6b', audio: '#4ecdc4', transcript: '#ffd93d', synthesis: '#a78bfa' };
+  return colors[sense] || '#888';
+}
+
+// ─── Event Handlers ───
+function handleWorkerUpdate(data) {
+  if (!data.worker) return;
+  const w = data.worker;
+  // Update single card
+  renderWorkers([w]);
+}
+
+function handleStageUpdate(data) {
+  if (data.stages) renderPipeline(data.stages);
+}
+
+function handleJobProgress(data) {
+  // Could update a global progress bar
+  addLog('progress', `${data.completed}/${data.total} chunks (${(data.progress|0)}%)`);
+}
+
+function handleJobCompleted(data) {
+  currentJobData = data;
+  localStorage.removeItem('pe_activeJob');
+  addLog('system', '✅ Analysis complete!');
+  showResults(data);
+  loadHistory();
+}
+
+function handleJobFailed(data) {
+  localStorage.removeItem('pe_activeJob');
+  addLog('error', `❌ Job failed: ${data.error}`);
+}
+
+function handleWorkerLog(data) {
+  addLog('info', data.message);
+}
+
+// ─── Polling (Primary) ───
+let pollTimer = null;
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollJob();
+  pollTimer = setInterval(pollJob, 2000);
+}
+function stopPolling() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+}
+async function pollJob() {
+  if (!currentJobId) return;
+  try {
+    const resp = await fetch(`${API}/api/swarm/jobs/${currentJobId}`);
+    const data = await resp.json();
+    if (data.error) return;
+
+    currentJobData = data;
+
+    // Update status display
+    const title = data.title || data.source || '';
+    if (title) document.title = `🧠 ${title} — Perception Engine`;
+
+    if (data.pipeline_stages) renderPipeline(data.pipeline_stages);
+    if (data.workers) renderWorkers(data.workers);
+
+    // Update swarm stats from data
+    const workers = data.workers || [];
+    const active = workers.filter(w => w.state === 'working').length;
+    const done = workers.filter(w => w.state === 'done').length;
+    if (workers.length > 0) {
+      document.getElementById('swarmStats').textContent = 
+        `${active} active · ${done}/${workers.length} done · ${(data.progress||0).toFixed(0)}%`;
+    }
+
+    // Stream live document
+    updateLiveDocFromJob(data);
+
+    if (data.status === 'completed') {
+      stopPolling();
+      localStorage.removeItem('pe_activeJob');
+      showResults(data);
+      loadHistory();
+      addLog('system', '✅ Analysis complete!');
+      return;
+    }
+    if (data.status === 'failed') {
+      stopPolling();
+      localStorage.removeItem('pe_activeJob');
+      addLog('error', `❌ Failed: ${data.metadata?.error || 'unknown'}`);
+      return;
+    }
+    
+    // Show current activity
+    if (data.current_message) {
+      addLog('info', data.current_message);
+    }
+  } catch(e) {
+    // keep polling
+  }
+}
+
+// ─── Results Display ───
+function showResults(data) {
+  document.getElementById('resultsSection').classList.add('active');
+  showTab(activeTab);
+}
+
+function showTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.results-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.results-tab').forEach(t => {
+    if (t.textContent.toLowerCase().includes(tab) || 
+        (tab === 'summary' && t.textContent === 'Summary') ||
+        (tab === 'understanding' && t.textContent.includes('Understanding')) ||
+        (tab === 'vision' && t.textContent.includes('Vision')) ||
+        (tab === 'audio' && t.textContent.includes('Audio')))
+      t.classList.add('active');
+  });
+
+  const content = document.getElementById('resultsContent');
+  if (!currentJobData) { content.innerHTML = '<p>No data yet...</p>'; return; }
+
+  switch(tab) {
+    case 'summary':
+      content.innerHTML = renderMarkdown(currentJobData.final_summary || currentJobData.summary || 'Generating summary...');
+      break;
+    case 'understanding':
+      content.innerHTML = renderMarkdown(currentJobData.merged_understanding || currentJobData.understanding || 'Merging streams...');
+      break;
+    case 'vision':
+      const vr = currentJobData.vision_results || currentJobData.frames || [];
+      if (!vr.length) { content.innerHTML = '<p>No vision data</p>'; return; }
+      content.innerHTML = vr.map(v =>
+        `<div style="margin-bottom:0.75rem;padding:0.5rem;background:var(--surface2);border-radius:8px;">
+          <strong style="color:var(--vision)">${esc(v.timestamp_str)}</strong>
+          <span style="color:var(--text-muted);font-size:0.7rem;margin-left:0.5rem">${esc(v.filename || '')}</span>
+          <p style="margin-top:0.3rem">${esc(v.analysis)}</p>
+        </div>`
+      ).join('');
+      break;
+    case 'audio':
+      const ar = currentJobData.audio_results || [];
+      if (!ar.length) { content.innerHTML = '<p>No audio data</p>'; return; }
+      content.innerHTML = ar.map(a =>
+        `<div style="margin-bottom:0.75rem;padding:0.5rem;background:var(--surface2);border-radius:8px;">
+          <strong style="color:var(--audio)">${esc(a.start_str || '')} – ${esc(a.end_str || '')}</strong>
+          <p style="margin-top:0.3rem">${esc(a.text || '')}</p>
+        </div>`
+      ).join('');
+      break;
+  }
+}
+
+// ─── Export ───
+function exportResults(format) {
+  if (!currentJobData) return;
+  if (format === 'md') {
+    window.open(`${API}/api/jobs/${currentJobId}/export`, '_blank');
+  } else {
+    navigator.clipboard.writeText(JSON.stringify(currentJobData, null, 2));
+    alert('Copied to clipboard');
+  }
+}
+
+// ─── History ───
+async function loadHistory() {
+  try {
+    const resp = await fetch(`${API}/api/swarm/jobs`);
+    const data = await resp.json();
+    const list = document.getElementById('historyList');
+    list.innerHTML = '';
+    (data.jobs || []).slice(0, 10).forEach(j => {
+      const item = document.createElement('div');
+      item.className = 'history-item';
+      item.onclick = () => loadJob(j.id);
+      const status = j.status || 'unknown';
+      const time = j.started_at ? new Date(j.started_at * 1000).toLocaleString() : '';
+      item.innerHTML = `
+        <span class="history-dot ${status}"></span>
+        <span class="history-title-text">${esc(j.title || j.source || j.id)}</span>
+        <span class="history-meta">${time}</span>
+      `;
+      list.appendChild(item);
+    });
+  } catch(e) { /* ignore */ }
+}
+
+async function loadJob(jobId) {
+  currentJobId = jobId;
+  try {
+    const resp = await fetch(`${API}/api/swarm/jobs/${jobId}`);
+    const data = await resp.json();
+    currentJobData = data;
+    showSwarmUI();
+    if (data.pipeline_stages) renderPipeline(data.pipeline_stages);
+    if (data.workers) renderWorkers(data.workers);
+    if (data.status === 'completed') showResults(data);
+    if (socket && socket.connected) socket.emit('subscribe_job', { job_id: jobId });
+  } catch(e) { console.error(e); }
+}
+
+// ─── Log ───
+function addLog(type, message) {
+  const ts = new Date().toLocaleTimeString();
+  logEntries.push({ ts, type, message });
+  if (logEntries.length > 200) logEntries.shift();
+  const stream = document.getElementById('logStream');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.innerHTML = `<span class="ts">${ts}</span> [${type}] ${esc(message)}`;
+  stream.appendChild(entry);
+  stream.scrollTop = stream.scrollHeight;
+}
+
+function toggleLog() {
+  const stream = document.getElementById('logStream');
+  const toggle = stream.previousElementSibling;
+  if (stream.classList.contains('open')) {
+    stream.classList.remove('open');
+    toggle.textContent = '▶ Activity Log';
+  } else {
+    stream.classList.add('open');
+    toggle.textContent = '▼ Activity Log';
+  }
+}
+
+// ─── Helpers ───
+function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function renderMarkdown(text) {
+  if (!text) return '';
+  return text
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^\- (.+)$/gm, '<li>$1</li>')
+    .replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\n\n/g, '<br><br>')
+    .replace(/\n/g, '<br>');
+}
+
+// ─── Capacity Calculator ───
+let capacityCache = {};
+
+async function fetchCapacity(model) {
+  if (capacityCache[model]) return capacityCache[model];
+  try {
+    const resp = await fetch(`${API}/api/swarm/capacity?model=${encodeURIComponent(model)}&context=512`);
+    const data = await resp.json();
+    capacityCache[model] = data;
+    return data;
+  } catch(e) {
+    return { max_workers: 20, recommended: 10, max_workers_ram: 128, max_workers_gpu: 20, notes: 'estimate' };
+  }
+}
+
+async function updateCapacity() {
+  const model = document.getElementById('cfgVision').value;
+  const cap = await fetchCapacity(model);
+
+  const slider = document.getElementById('workerSlider');
+  slider.max = cap.max_workers || 20;
+  slider.value = Math.min(parseInt(slider.value), cap.max_workers);
+
+  // If first load or model changed, set to recommended
+  if (!slider.dataset.userSet) {
+    slider.value = cap.recommended || Math.min(10, cap.max_workers);
+  }
+
+  document.getElementById('workerMax').textContent = `max: ${cap.max_workers}`;
+  updateWorkerLabel();
+}
+
+function updateWorkerLabel() {
+  const val = parseInt(document.getElementById('workerSlider').value);
+  document.getElementById('workerCountLabel').textContent = val;
+  document.getElementById('workerSlider').dataset.userSet = 'true';
+
+  // Update capacity info display
+  const model = document.getElementById('cfgVision').value;
+  const cap = capacityCache[model];
+  if (cap) {
+    // Estimate RAM at this worker count
+    const ramPerWorker = (cap.ram_per_worker_mb || 13) / 1024; // GB
+    const baseRAM = 15.6 + (cap.total_ram_at_max_gb ? (cap.total_ram_at_max_gb - cap.max_workers * ramPerWorker) : 2);
+    const totalRAM = baseRAM + val * ramPerWorker;
+    const pct = (totalRAM / 121.7 * 100).toFixed(0);
+    document.getElementById('capRAM').textContent = `RAM: ${totalRAM.toFixed(1)}/${121.7} GB (${pct}%)`;
+    document.getElementById('capRAM').style.color = pct > 90 ? 'var(--error)' : pct > 75 ? 'var(--transcript)' : 'var(--text-dim)';
+
+    // Estimate throughput
+    const baseTPS = cap.throughput_at_rec ? (cap.throughput_at_rec / (cap.recommended || 1)) : 100;
+    const estTPS = (baseTPS * val * (1 - 0.015 * val)).toFixed(0);
+    document.getElementById('capThroughput').textContent = `~${estTPS} tok/s total`;
+
+    document.getElementById('capNote').textContent = cap.notes || '';
+    document.getElementById('capNote').style.color = val >= cap.max_workers ? 'var(--error)' : 'var(--text-dim)';
+  }
+}
+
+// ─── Model Loading ───
+const MODEL_DEFAULTS = {
+  cfgVision: 'qwen3.5:0.8b',
+  cfgAudio: 'qwen3.5:0.8b',
+  cfgTranscript: 'qwen3.5:0.8b',
+  cfgSynthesis: 'qwen3.5:2b',
+};
+
+async function loadModels() {
+  try {
+    const resp = await fetch(`${API}/api/swarm/models`);
+    const data = await resp.json();
+    const models = data.models || [];
+    const selects = ['cfgVision', 'cfgAudio', 'cfgTranscript', 'cfgSynthesis'];
+    selects.forEach(id => {
+      const sel = document.getElementById(id);
+      sel.innerHTML = '';
+      models.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.name;
+        const sizeMB = m.size ? `${(m.size / 1e9).toFixed(1)}GB` : '';
+        opt.textContent = `${m.name}${sizeMB ? ' (' + sizeMB + ')' : ''}`;
+        sel.appendChild(opt);
+      });
+      // Set default
+      const def = MODEL_DEFAULTS[id];
+      if (def) {
+        const match = [...sel.options].find(o => o.value === def);
+        if (match) sel.value = def;
+      }
+      // Recalculate capacity when vision model changes
+      if (id === 'cfgVision') {
+        sel.addEventListener('change', () => {
+          delete document.getElementById('workerSlider').dataset.userSet;
+          capacityCache = {};
+          updateCapacity();
+        });
+      }
+    });
+    // Initial capacity calc
+    await updateCapacity();
+  } catch(e) {
+    console.error('Failed to load models:', e);
+    // Fallback
+    const fallback = ['qwen3.5:0.8b', 'qwen3.5:2b', 'qwen3.5:4b'];
+    ['cfgVision', 'cfgAudio', 'cfgTranscript', 'cfgSynthesis'].forEach(id => {
+      const sel = document.getElementById(id);
+      sel.innerHTML = fallback.map(m => `<option value="${m}">${m}</option>`).join('');
+      sel.value = MODEL_DEFAULTS[id] || fallback[0];
+    });
+  }
+}
+
+// ─── Init ───
+window.addEventListener('DOMContentLoaded', () => {
+  loadModels();
+  connectWS();
+  loadHistory();
+  // Periodic WS status check — update badge if socket connected after initial render
+  setInterval(() => {
+    const badge = document.getElementById('wsStatus');
+    if (socket && socket.connected && badge.classList.contains('disconnected')) {
+      badge.className = 'status-badge connected';
+      badge.textContent = '● live';
+    } else if ((!socket || !socket.connected) && badge.classList.contains('connected')) {
+      badge.className = 'status-badge disconnected';
+      badge.textContent = '● disconnected';
+    }
+  }, 2000);
+
+  // Auto-resume active job on page refresh
+  if (currentJobId) {
+    resumeJob(currentJobId);
+  }
+});
+
+async function resumeJob(jobId) {
+  try {
+    const resp = await fetch(`${API}/api/swarm/jobs/${jobId}`);
+    if (!resp.ok) {
+      // Job doesn't exist anymore, clean up
+      localStorage.removeItem('pe_activeJob');
+      currentJobId = null;
+      return;
+    }
+    const data = await resp.json();
+    if (data.error) {
+      localStorage.removeItem('pe_activeJob');
+      currentJobId = null;
+      return;
+    }
+
+    currentJobData = data;
+    showSwarmUI();
+
+    // Restore pipeline and workers
+    if (data.pipeline_stages) renderPipeline(data.pipeline_stages);
+    if (data.workers) renderWorkers(data.workers);
+
+    // Show source in input
+    if (data.source) document.getElementById('sourceInput').value = data.source;
+
+    if (data.status === 'completed') {
+      localStorage.removeItem('pe_activeJob');
+      showResults(data);
+      updateLiveDocFromJob(data);
+    } else if (data.status === 'failed') {
+      localStorage.removeItem('pe_activeJob');
+      addLog('error', `❌ Previous job failed: ${data.metadata?.error || 'unknown'}`);
+    } else {
+      // Still running — resume polling
+      if (socket && socket.connected) {
+        socket.emit('subscribe_job', { job_id: jobId });
+      }
+      startPolling();
+      addLog('system', `Resumed tracking: ${jobId} (${data.status})`);
+    }
+  } catch(e) {
+    localStorage.removeItem('pe_activeJob');
+    currentJobId = null;
+  }
+}
+</script>
+</body>
+</html>
