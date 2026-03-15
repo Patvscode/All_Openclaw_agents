@@ -1,4 +1,0 @@
-stamp=20260310_100033
-host=spark-ccb2
-openclaw_version=unknown
-gateway_status=
