@@ -24,6 +24,8 @@ const handler = async (
   try {
     const prompt = event?.prompt?.trim();
     if (!prompt || prompt.length < MIN_PROMPT_LENGTH) return;
+    // Skip for main agent — disabled per Pat's request 2026-03-12
+    if (ctx?.agentId === "main") return;
     if (ctx?.trigger === "heartbeat" || ctx?.trigger === "cron") return;
     if (SKIP_PATTERNS.some((p) => p.test(prompt))) return;
     if (prompt.startsWith("[media attached") || prompt.startsWith("<<SYSTEM")) return;

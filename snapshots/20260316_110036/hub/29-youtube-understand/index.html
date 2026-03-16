@@ -584,7 +584,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', 'Inter', system
     <div class="results-tab" onclick="showTab('understanding')">Full Understanding</div>
     <div class="results-tab" onclick="showTab('vision')">👁️ Vision</div>
     <div class="results-tab" onclick="showTab('audio')">👂 Audio</div>
-    <div class="results-tab" onclick="showTab('branches')">🌳 Research Tree</div>
   </div>
   <div class="results-content" id="resultsContent"></div>
   <div class="export-bar">
@@ -720,7 +719,6 @@ async function pollIngestJob(jobId) {
     try {
       const resp = await fetch(`${API}/api/ingest/${jobId}`);
       const data = await resp.json();
-      
       // Render swarm workers if available
       const workers = data.workers || [];
       const stepsEl = document.getElementById('ingest-steps-' + jobId);
@@ -814,6 +812,19 @@ async function pollIngestJob(jobId) {
           if (voiceEl) {
             voiceEl.style.display = 'block';
             voiceEl.innerHTML = `<audio controls src="${API}${data.voice_memo_url}" style="width:100%"></audio><div style="font-size:11px;color:#888">🎙️ Voice memo</div>`;
+          }
+        }
+        
+        // Add Deep Research button on successful completion
+        if (data.status === 'complete') {
+          const resultEl = document.getElementById('ingest-result-' + jobId);
+          if (resultEl) {
+            const drBtn = document.createElement('div');
+            drBtn.innerHTML = `<a href="../33-deep-research/index.html?job=${encodeURIComponent(jobId)}" 
+              style="display:inline-block;margin-top:10px;padding:8px 16px;background:linear-gradient(135deg,#7c5cff,#6d4de6);
+              color:white;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;cursor:pointer">
+              🔬 Launch Deep Research on this</a>`;
+            resultEl.appendChild(drBtn);
           }
         }
         return;
@@ -1202,12 +1213,27 @@ function updateLiveDocFromJob(data) {
     doc.scrollTop = doc.scrollHeight;
   }
 
-  // Show RAG ingestion status
+  // Show RAG ingestion status + Deep Research button
   if (data.status === 'completed') {
     const rag = document.getElementById('ragStatus');
     rag.style.display = 'flex';
     rag.className = 'rag-status done';
     document.getElementById('ragText').textContent = '📚 Ingested into unified knowledge store — searchable by all agents';
+    
+    // Add Deep Research launch button
+    const jobId = data.id || data.job_id || '';
+    if (jobId && !document.getElementById('drLaunchBtn')) {
+      const drDiv = document.createElement('div');
+      drDiv.id = 'drLaunchBtn';
+      drDiv.style.cssText = 'margin-top:10px;text-align:center';
+      drDiv.innerHTML = `<a href="../33-deep-research/index.html?job=${encodeURIComponent(jobId)}" 
+        style="display:inline-block;padding:10px 24px;background:linear-gradient(135deg,#7c5cff,#6d4de6);
+        color:white;border-radius:10px;font-size:14px;font-weight:600;text-decoration:none;
+        box-shadow:0 4px 20px rgba(124,92,255,0.3);transition:transform 0.2s"
+        onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+        🔬 Launch Deep Research v2</a>`;
+      rag.parentElement.appendChild(drDiv);
+    }
   }
 }
 
@@ -1318,42 +1344,6 @@ function showResults(data) {
   showTab(activeTab);
 }
 
-function renderBranchTree(data) {
-  const meta = data.metadata || {};
-  const branches = meta.branch_tree || [];
-  const depthStats = meta.depth_stats || {};
-  if (!branches.length) return '<p>No branch data yet...</p>';
-  const byId = Object.fromEntries(branches.map(b => [b.id, b]));
-  const roots = branches.filter(b => !b.parent_id);
-  const badge = (label, color) => `<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:${color};font-size:11px;font-weight:600;margin-right:6px;">${label}</span>`;
-  function clsColor(cls){ return cls==='core' ? 'rgba(34,197,94,.18)' : cls==='supporting' ? 'rgba(59,130,246,.18)' : cls==='further_research' ? 'rgba(234,179,8,.18)' : 'rgba(239,68,68,.18)'; }
-  function statusColor(st){ return st==='completed' ? '#22c55e' : st==='error' ? '#ef4444' : st==='planned' ? '#666680' : '#3b82f6'; }
-  function renderNode(node, depth=0){
-    const children = (node.child_ids||[]).map(id => byId[id]).filter(Boolean);
-    const score = node.score?.score != null ? ` · score ${node.score.score}` : '';
-    const stop = node.stop_reason ? `<div style="font-size:11px;color:#fca5a5;margin-top:4px;">stop: ${esc(node.stop_reason)}</div>` : '';
-    const outputs = node.output_paths && Object.keys(node.output_paths).length ? `<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">outputs: ${esc(Object.keys(node.output_paths).join(', '))}</div>` : '';
-    return `<div style="margin-left:${depth*18}px;margin-top:10px;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--surface2);">
-      <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">
-        <div>
-          ${badge(node.branch_class || 'core', clsColor(node.branch_class || 'core'))}
-          <strong>${esc(node.title || node.id)}</strong>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">depth ${node.depth} · ${esc(node.resource_type || 'source')} · <span style="color:${statusColor(node.status)}">${esc(node.status || 'unknown')}</span>${score}</div>
-          ${node.question ? `<div style="font-size:12px;margin-top:4px;">${esc(node.question)}</div>` : ''}
-          ${outputs}
-          ${stop}
-        </div>
-        <div style="font-size:11px;color:var(--text-muted);white-space:nowrap;">workers ${(node.worker_ids||[]).length} · children ${(node.child_ids||[]).length}</div>
-      </div>
-      ${children.map(ch => renderNode(ch, depth+1)).join('')}
-    </div>`;
-  }
-  const statHtml = Object.keys(depthStats).sort((a,b)=>Number(a)-Number(b)).map(k => {
-    const d=depthStats[k]; return `<span style="display:inline-block;margin-right:8px;font-size:12px;color:var(--text-muted);">L${k}: ${d.count} branches, ${d.completed} done, ${d.active} active</span>`;
-  }).join('');
-  return `<div><div style="margin-bottom:12px;">${statHtml}</div>${roots.map(r => renderNode(r)).join('')}</div>`;
-}
-
 function showTab(tab) {
   activeTab = tab;
   document.querySelectorAll('.results-tab').forEach(t => t.classList.remove('active'));
@@ -1362,8 +1352,7 @@ function showTab(tab) {
         (tab === 'summary' && t.textContent === 'Summary') ||
         (tab === 'understanding' && t.textContent.includes('Understanding')) ||
         (tab === 'vision' && t.textContent.includes('Vision')) ||
-        (tab === 'audio' && t.textContent.includes('Audio')) ||
-        (tab === 'branches' && t.textContent.includes('Research Tree')))
+        (tab === 'audio' && t.textContent.includes('Audio')))
       t.classList.add('active');
   });
 
@@ -1397,9 +1386,6 @@ function showTab(tab) {
           <p style="margin-top:0.3rem">${esc(a.text || '')}</p>
         </div>`
       ).join('');
-      break;
-    case 'branches':
-      content.innerHTML = renderBranchTree(currentJobData);
       break;
   }
 }
