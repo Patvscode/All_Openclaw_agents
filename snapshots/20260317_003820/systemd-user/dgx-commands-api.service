@@ -1,10 +1,10 @@
 [Unit]
-Description=DGX Spark Commands API (port 8092)
+Description=Commands API (port 8092) — Mission Control backend
 After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/pmello/.openclaw/workspace-max/coding-tests/04-system-dashboard
+WorkingDirectory=/home/pmello/.openclaw/hub
 ExecStart=/usr/bin/python3 commands-api.py
 Restart=always
 RestartSec=5
