@@ -48,14 +48,15 @@ class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
             return
         return super().do_GET()
 
-os.chdir('/home/pmello/.openclaw/hub')
+HUB_DIR = os.environ.get("CLAWBOARD_HUB_DIR", os.path.join(os.path.expanduser("~"), ".openclaw", "hub"))
+os.chdir(HUB_DIR)
 
 # HTTP on 8090 (main, always works)
 http_server = http.server.HTTPServer(('0.0.0.0', 8090), NoCacheHandler)
 
 # HTTPS on 8443 (for camera/mic on mobile)
-cert_file = '/home/pmello/.openclaw/hub/cert.pem'
-key_file = '/home/pmello/.openclaw/hub/key.pem'
+cert_file = os.path.join(HUB_DIR, 'cert.pem')
+key_file = os.path.join(HUB_DIR, 'key.pem')
 
 def run_https():
     try:
