@@ -1,0 +1,307 @@
+{
+  "version": 1,
+  "updatedAt": "2026-04-09T01:18:29.097Z",
+  "entries": {
+    "memory:memory/2026-03-12.md:82:103": {
+      "key": "memory:memory/2026-03-12.md:82:103",
+      "path": "memory/2026-03-12.md",
+      "startLine": 82,
+      "endLine": 103,
+      "source": "memory",
+      "snippet": "- **Update:** Ensure the progress is updated in the `#projects` channel. ## Session Summary [10:01:22 ] (auto-generated) **Role:** Agent Assistant (Autonomy Loop) **Status:** Active Card: `card-6319c3` **Project:** Memory Ops Hub Integration **Date:** March 12, 2026, 9:49 AM **What was the agent working on?** Executed `/home/pmello/.openclaw/tools/codex_autonomy_loop.sh` to run the autonomy loop. Executed one concrete step on active card `card-6319c3`: verified the Memory Ops hub page (`http://127.0.0.1:8090/20-memory-ops`) in-browser against a fresh fallback/proof bundle. Confirmed the Runtime panel is rendering fresh fallback snapshot data and exposing live API probe failures c",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "totalScore": 0.4265431821346283,
+      "maxScore": 0.4265431821346283,
+      "firstRecalledAt": "2026-04-09T01:16:15.592Z",
+      "lastRecalledAt": "2026-04-09T01:16:15.592Z",
+      "queryHashes": [
+        "40dfb04e9331"
+      ],
+      "recallDays": [
+        "2026-04-08"
+      ],
+      "conceptTags": [
+        "auto-generated",
+        "card-6319c3",
+        "home/pmello",
+        "127.0.0.1",
+        "8090/20-memory-ops",
+        "in-browser",
+        "fallback/proof",
+        "update"
+      ]
+    },
+    "memory:memory/2026-03-03.md:71:79": {
+      "key": "memory:memory/2026-03-03.md:71:79",
+      "path": "memory/2026-03-03.md",
+      "startLine": 71,
+      "endLine": 79,
+      "source": "memory",
+      "snippet": "- `~/.openclaw/comms/web/server.py` restored to `182e354` baseline (rollback commit `67ef910`). - `~/.openclaw/hub/21-agent-comms/index.html` restored to `30ceafc` baseline (rollback commit `e545d8c`). - Local scripts reverted to baseline behavior: - `~/.openclaw/tools/agent-startup-sync.sh` - `~/.openclaw/tools/comms.sh` - `~/.openclaw/tools/comms_notify.sh` - Post-rollback health checks all green: `/api/health`, `/api/channels`, `/api/unread/codex`, UI page load. - Rollback report: `artifacts/rollback_report_2026-03-03_1529.md`.",
+      "recallCount": 2,
+      "dailyCount": 0,
+      "totalScore": 0.8563766807317733,
+      "maxScore": 0.4344691604375839,
+      "firstRecalledAt": "2026-04-09T01:16:15.592Z",
+      "lastRecalledAt": "2026-04-09T01:18:29.097Z",
+      "queryHashes": [
+        "40dfb04e9331",
+        "6088c7c2d80c"
+      ],
+      "recallDays": [
+        "2026-04-08"
+      ],
+      "conceptTags": [
+        "openclaw/comms/web/server.py",
+        "openclaw/tools/comms.sh",
+        "openclaw/tools/comms-notify.sh",
+        "post-rollback",
+        "api/health",
+        "api/channels",
+        "api/unread/codex",
+        "openclaw"
+      ]
+    },
+    "memory:memory/2026-03-12.md:99:116": {
+      "key": "memory:memory/2026-03-12.md:99:116",
+      "path": "memory/2026-03-12.md",
+      "startLine": 99,
+      "endLine": 116,
+      "source": "memory",
+      "snippet": "**What was completed vs. still in progress?** - **Completed:** Verified Memory Ops hub page in-browser; confirmed Runtime panel rendering fresh fallback snapshot data; posted progress to `#projects`. - **Still in progress:** Waiting for the next step from the card history to proceed with the verification. **The exact next step to continue:** Execute one concrete step on active card `card-6319c3` to verify the Memory Ops hub page in-browser against the fresh fallback/proof bundle. ## Session Summary [14:00:32 ] (auto-generated) **Agent Name:** OpenCLaw Agent (P M) **Role:** Content Analysis & Deep Research Architect **Session ID:** 1409 **Status:** Active ### **1. What was the agen",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "totalScore": 0.418592169880867,
+      "maxScore": 0.418592169880867,
+      "firstRecalledAt": "2026-04-09T01:16:15.592Z",
+      "lastRecalledAt": "2026-04-09T01:16:15.592Z",
+      "queryHashes": [
+        "40dfb04e9331"
+      ],
+      "recallDays": [
+        "2026-04-08"
+      ],
+      "conceptTags": [
+        "in-browser",
+        "card-6319c3",
+        "fallback/proof",
+        "auto-generated",
+        "what",
+        "was",
+        "completed",
+        "still"
+      ]
+    },
+    "memory:memory/2026-03-03.md:18:42": {
+      "key": "memory:memory/2026-03-03.md:18:42",
+      "path": "memory/2026-03-03.md",
+      "startLine": 18,
+      "endLine": 42,
+      "source": "memory",
+      "snippet": "- board button + loading fallback, - discuss-thread handlers bound globally, - thread body rendering fix (`body` field display), - mention chips UI added in card thread composer. - Important caveat: @mention chips are UI-only for now (no guaranteed nudge pipeline trigger unless explicitly wired). ### Governance / execution discipline - Created and published `EXECUTION_GOVERNANCE_V1.md` in workspace-codex; distributed to `#general`, `#projects`, `#ops`, plus DM to `main` and `main_q35`. - Governance baseline includes: mandatory startup sync, board-first ownership, proof-based done criteria, anti-idle behavior, blocked-with-evidence discipline. ### Q35/Jess card quality audit finding",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "totalScore": 0.4154966592788696,
+      "maxScore": 0.4154966592788696,
+      "firstRecalledAt": "2026-04-09T01:16:15.592Z",
+      "lastRecalledAt": "2026-04-09T01:16:15.592Z",
+      "queryHashes": [
+        "40dfb04e9331"
+      ],
+      "recallDays": [
+        "2026-04-08"
+      ],
+      "conceptTags": [
+        "discuss-thread",
+        "ui-only",
+        "execution-governance-v1.md",
+        "workspace-codex",
+        "main-q35",
+        "board-first",
+        "proof-based",
+        "anti-idle"
+      ]
+    },
+    "memory:memory/2026-03-03.md:1:24": {
+      "key": "memory:memory/2026-03-03.md:1:24",
+      "path": "memory/2026-03-03.md",
+      "startLine": 1,
+      "endLine": 24,
+      "source": "memory",
+      "snippet": "## 2026-03-03 02:44 EST — Durable memory flush ### Jess runtime / reliability - Confirmed and switched Jess back to GPU-backed llama.cpp runtime (`build-cuda`) with `--n-gpu-layers 999`; verified active GPU attachment via `nvidia-smi` and runtime health endpoint. - Identified real overflow root cause from logs: repeated requests above context limit (e.g., ~68k–70k tokens vs ctx 65536), producing 400 errors. - Applied live mitigation: - increased Jess service context from `65536` to `98304` in `~/.config/systemd/user/jess-q35.service`, - updated OpenClaw q35cpp model contextWindow to `98304` in `~/.openclaw/openclaw.json`, - restarted service and validated health/chat recovery (`/heal",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "totalScore": 0.41540478467941283,
+      "maxScore": 0.41540478467941283,
+      "firstRecalledAt": "2026-04-09T01:16:15.592Z",
+      "lastRecalledAt": "2026-04-09T01:16:15.592Z",
+      "queryHashes": [
+        "40dfb04e9331"
+      ],
+      "recallDays": [
+        "2026-04-08"
+      ],
+      "conceptTags": [
+        "gpu-backed",
+        "llama.cpp",
+        "build-cuda",
+        "n-gpu-layers",
+        "nvidia-smi",
+        "e.g",
+        "openclaw/openclaw.json",
+        "health/chat"
+      ]
+    },
+    "memory:memory/2026-03-01.md:1:21": {
+      "key": "memory:memory/2026-03-01.md:1:21",
+      "path": "memory/2026-03-01.md",
+      "startLine": 1,
+      "endLine": 21,
+      "source": "memory",
+      "snippet": "- Implemented automated multi-daily agent backup system: - Tool: `~/.openclaw/tools/agents_backup_sync.sh` - Timer: `agents-backup-sync.timer` (every 6h) - Service: `agents-backup-sync.service` - Target repo clone: `~/.openclaw/backups/All_Openclaw_agents` - Added `agent-backup-sync` skill in codex/main/flash/prime/q35/max workspaces. - Updated AGENTS.md files to document automated backups + manual trigger command. - Initial backup snapshot committed locally in target repo; push failed due GitHub auth not configured in this environment. - Root cause identified for major OpenClaw outage: invalid config key `agents.list[*].maxConcurrent` is not accepted by current schema; this caused g",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "totalScore": 0.4747470766305923,
+      "maxScore": 0.4747470766305923,
+      "firstRecalledAt": "2026-04-09T01:18:29.097Z",
+      "lastRecalledAt": "2026-04-09T01:18:29.097Z",
+      "queryHashes": [
+        "6088c7c2d80c"
+      ],
+      "recallDays": [
+        "2026-04-08"
+      ],
+      "conceptTags": [
+        "backup",
+        "backups",
+        "multi-daily",
+        "agents-backup-sync.timer",
+        "agents-backup-sync.service",
+        "agent-backup-sync",
+        "codex/main/flash/prime/q35/max",
+        "agents.md"
+      ]
+    },
+    "memory:memory/2026-02-23.md:14:29": {
+      "key": "memory:memory/2026-02-23.md:14:29",
+      "path": "memory/2026-02-23.md",
+      "startLine": 14,
+      "endLine": 29,
+      "source": "memory",
+      "snippet": "- Created `USAGE_LEDGER.md` in workspace-codex with recommended local models, benchmark timings, baseline usage snapshot from `session_status`, and ongoing tracking plan. - Expanded `USAGE_LEDGER.md` with recommended additional local models/tools and a routing policy for coding/reasoning/vision/embeddings. ## 2026-02-22T21:11:40-05:00 | Agent ops toolkit build - tags: agent-ops,tooling - note: | Implemented 5 scripts, added skill + operations plan, ran smoke tests. ## 2026-02-22T21:55:06-05:00 | agent_ops passive usage telemetry - tags: agent_ops,telemetry,openclaw,usage,cron - note: | Implemented OpenClaw usage snapshot logging (JSON preferred, text fallback), local Ollama activity + t",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "totalScore": 0.4638194233179092,
+      "maxScore": 0.4638194233179092,
+      "firstRecalledAt": "2026-04-09T01:18:29.097Z",
+      "lastRecalledAt": "2026-04-09T01:18:29.097Z",
+      "queryHashes": [
+        "6088c7c2d80c"
+      ],
+      "recallDays": [
+        "2026-04-08"
+      ],
+      "conceptTags": [
+        "embedding",
+        "embeddings",
+        "usage-ledger.md",
+        "workspace-codex",
+        "session-status",
+        "models/tools",
+        "2026-02-22t21",
+        "40-05"
+      ]
+    },
+    "memory:memory/2026-02-23.md:24:33": {
+      "key": "memory:memory/2026-02-23.md:24:33",
+      "path": "memory/2026-02-23.md",
+      "startLine": 24,
+      "endLine": 33,
+      "source": "memory",
+      "snippet": "Implemented OpenClaw usage snapshot logging (JSON preferred, text fallback), local Ollama activity + triage metadata logging, daily usage summary report generation, and idempotent cron installer (15m capture + nightly summary). Updated agent_ops README and agent-ops-orchestrator skill docs. Ran smoke tests for py_compile, snapshot/model logging, daily summary, and cron installer dry-run/idempotence via fake crontab. - Created `LEVERAGE_BACKLOG.md` with prioritized initiatives to reduce Codex spend while increasing capability/reliability, including scoring model, KPI set, and milestones. ## 2026-02-23T22:12:00-05:00 | agent_ops milestone A - tags: agent_ops,usage,triage,budget_router - not",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "totalScore": 0.4315926969051361,
+      "maxScore": 0.4315926969051361,
+      "firstRecalledAt": "2026-04-09T01:18:29.097Z",
+      "lastRecalledAt": "2026-04-09T01:18:29.097Z",
+      "queryHashes": [
+        "6088c7c2d80c"
+      ],
+      "recallDays": [
+        "2026-04-08"
+      ],
+      "conceptTags": [
+        "router",
+        "agent-ops",
+        "agent-ops-orchestrator",
+        "py-compile",
+        "snapshot/model",
+        "dry-run/idempotence",
+        "leverage-backlog.md",
+        "capability/reliability"
+      ]
+    },
+    "memory:memory/2026-02-22.md:47:64": {
+      "key": "memory:memory/2026-02-22.md:47:64",
+      "path": "memory/2026-02-22.md",
+      "startLine": 47,
+      "endLine": 64,
+      "source": "memory",
+      "snippet": "latest_budget_hint=remaining=12% ## 2026-02-22T22:10:50-05:00 | Agent ops triage - tags: agent-ops,triage,routing - note: | triage_report=/home/pmello/.openclaw/workspace-codex/reports/agent_ops/triage_MILESTONEA_SMOKE.md status=ok requested_mode=normal recommended_mode=normal routing_policy=balanced-local-routing failure_path=tools/agent_ops failure_hours=2 failure_limit=3 device_rc=0 failure_rc=0 ollama_rc=0 latest_budget_hint=none report_summary_only=1",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "totalScore": 0.4256324678659439,
+      "maxScore": 0.4256324678659439,
+      "firstRecalledAt": "2026-04-09T01:18:29.097Z",
+      "lastRecalledAt": "2026-04-09T01:18:29.097Z",
+      "queryHashes": [
+        "6088c7c2d80c"
+      ],
+      "recallDays": [
+        "2026-04-08"
+      ],
+      "conceptTags": [
+        "latest-budget-hint",
+        "2026-02-22t22",
+        "50-05",
+        "agent-ops",
+        "triage-report",
+        "home/pmello",
+        "requested-mode",
+        "recommended-mode"
+      ]
+    },
+    "memory:memory/2026-03-02.md:98:115": {
+      "key": "memory:memory/2026-03-02.md:98:115",
+      "path": "memory/2026-03-02.md",
+      "startLine": 98,
+      "endLine": 115,
+      "source": "memory",
+      "snippet": "From available records, 2026-02-28 contains setup/orientation context (not the full keeper-model debate yet): 1) Jess baseline identity/path already established - Jess mapped as local q35 agent in workspace-q35 with model path intent set to qwen3.5-35b-a3b-q8. 2) Team-wide infra groundwork was laid - Shared docs/skills/memory scaffolding and collaboration tooling were distributed to all agents, including Jess. - This matters because the next day’s memory/keeper architecture work built directly on that shared infra. 3) Early known failure mode context (captured in q35 history) - Ollama path for qwen3.5 q8 was failing; move toward llama.cpp (`q35cpp`) became the durable direction. - Large c",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "totalScore": 0.4239360630512237,
+      "maxScore": 0.4239360630512237,
+      "firstRecalledAt": "2026-04-09T01:18:29.097Z",
+      "lastRecalledAt": "2026-04-09T01:18:29.097Z",
+      "queryHashes": [
+        "6088c7c2d80c"
+      ],
+      "recallDays": [
+        "2026-04-08"
+      ],
+      "conceptTags": [
+        "setup/orientation",
+        "keeper-model",
+        "identity/path",
+        "workspace-q35",
+        "qwen3.5-35b-a3b-q8",
+        "team-wide",
+        "docs/skills/memory",
+        "memory/keeper"
+      ]
+    }
+  }
+}
