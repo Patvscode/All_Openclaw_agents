@@ -1,0 +1,15 @@
+[Unit]
+Description=OpenClaw V2 Experimental Gateway (port 19001, dreaming enabled)
+After=network.target
+
+[Service]
+Type=simple
+Environment=OPENCLAW_STATE_DIR=/home/pmello/DevTools/OpenClaw-V2-Experimental/state
+Environment=OPENCLAW_CONFIG_PATH=/home/pmello/DevTools/OpenClaw-V2-Experimental/state/openclaw.json
+ExecStart=/usr/bin/node /home/pmello/DevTools/OpenClaw-V2-Experimental/source/openclaw.mjs gateway --port 19001 --bind loopback
+Restart=on-failure
+RestartSec=10
+WorkingDirectory=/home/pmello/DevTools/OpenClaw-V2-Experimental
+
+[Install]
+WantedBy=default.target
