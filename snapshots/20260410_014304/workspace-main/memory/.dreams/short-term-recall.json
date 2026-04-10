@@ -1,0 +1,634 @@
+{
+  "version": 1,
+  "updatedAt": "2026-04-10T05:36:01.139Z",
+  "entries": {
+    "memory:memory/2026-02-28.md:71:71:d58760e45940": {
+      "key": "memory:memory/2026-02-28.md:71:71:d58760e45940",
+      "path": "memory/2026-02-28.md",
+      "startLine": 71,
+      "endLine": 71,
+      "source": "memory",
+      "snippet": "voice prefer female → persistent preferences in /.openclaw/voice-prefs.json",
+      "recallCount": 0,
+      "dailyCount": 0,
+      "groundedCount": 3,
+      "totalScore": 2.66,
+      "maxScore": 0.92,
+      "firstRecalledAt": "2026-04-10T05:36:01.139Z",
+      "lastRecalledAt": "2026-04-10T05:36:01.139Z",
+      "queryHashes": [
+        "63efa2a0b9bb",
+        "a45a74b97294"
+      ],
+      "recallDays": [
+        "2026-02-28"
+      ],
+      "conceptTags": [
+        "openclaw/voice-prefs.json",
+        "voice",
+        "prefer",
+        "female",
+        "persistent",
+        "preferences",
+        "openclaw",
+        "prefs.json"
+      ],
+      "claimHash": "d58760e45940"
+    },
+    "memory:memory/2026-03-04.md:75:75:2533879c4459": {
+      "key": "memory:memory/2026-03-04.md:75:75:2533879c4459",
+      "path": "memory/2026-03-04.md",
+      "startLine": 75,
+      "endLine": 75,
+      "source": "memory",
+      "snippet": "Prefers V1 layout (screen top, steps bottom) over V2's 3-column layout",
+      "recallCount": 0,
+      "dailyCount": 0,
+      "groundedCount": 3,
+      "totalScore": 2.66,
+      "maxScore": 0.92,
+      "firstRecalledAt": "2026-04-10T05:36:01.139Z",
+      "lastRecalledAt": "2026-04-10T05:36:01.139Z",
+      "queryHashes": [
+        "63efa2a0b9bb",
+        "a45a74b97294"
+      ],
+      "recallDays": [
+        "2026-03-04"
+      ],
+      "conceptTags": [
+        "3-column",
+        "prefers",
+        "layout",
+        "screen",
+        "top",
+        "steps",
+        "bottom",
+        "column"
+      ],
+      "claimHash": "2533879c4459"
+    },
+    "memory:memory/2026-03-05.md:91:91:ff93b9d28a4b": {
+      "key": "memory:memory/2026-03-05.md:91:91:ff93b9d28a4b",
+      "path": "memory/2026-03-05.md",
+      "startLine": 91,
+      "endLine": 91,
+      "source": "memory",
+      "snippet": "Default 16 tests preserved as built-in, always available",
+      "recallCount": 0,
+      "dailyCount": 0,
+      "groundedCount": 2,
+      "totalScore": 1.84,
+      "maxScore": 0.92,
+      "firstRecalledAt": "2026-04-10T05:36:01.139Z",
+      "lastRecalledAt": "2026-04-10T05:36:01.139Z",
+      "queryHashes": [
+        "63efa2a0b9bb"
+      ],
+      "recallDays": [
+        "2026-03-05"
+      ],
+      "conceptTags": [
+        "built-in",
+        "tests",
+        "preserved",
+        "built",
+        "always",
+        "available"
+      ],
+      "claimHash": "ff93b9d28a4b"
+    },
+    "memory:memory/2026-03-07.md:272:272:088b8207ee4d": {
+      "key": "memory:memory/2026-03-07.md:272:272:088b8207ee4d",
+      "path": "memory/2026-03-07.md",
+      "startLine": 272,
+      "endLine": 272,
+      "source": "memory",
+      "snippet": "Voice Preference (12:19 EST): Pat prefers the OpenAI TTS voice (from the tts tool) over local Sesame/CSM-1B",
+      "recallCount": 0,
+      "dailyCount": 0,
+      "groundedCount": 3,
+      "totalScore": 2.66,
+      "maxScore": 0.92,
+      "firstRecalledAt": "2026-04-10T05:36:01.139Z",
+      "lastRecalledAt": "2026-04-10T05:36:01.139Z",
+      "queryHashes": [
+        "63efa2a0b9bb",
+        "a45a74b97294"
+      ],
+      "recallDays": [
+        "2026-03-07"
+      ],
+      "conceptTags": [
+        "openai",
+        "sesame/csm-1b",
+        "voice",
+        "preference",
+        "pat",
+        "prefers",
+        "the",
+        "tts"
+      ],
+      "claimHash": "088b8207ee4d"
+    },
+    "memory:memory/2026-03-08.md:12:12:5c6337ccda38": {
+      "key": "memory:memory/2026-03-08.md:12:12:5c6337ccda38",
+      "path": "memory/2026-03-08.md",
+      "startLine": 12,
+      "endLine": 12,
+      "source": "memory",
+      "snippet": "WorkerStatus tracking: state, progress, current text, timing",
+      "recallCount": 0,
+      "dailyCount": 0,
+      "groundedCount": 2,
+      "totalScore": 1.84,
+      "maxScore": 0.92,
+      "firstRecalledAt": "2026-04-10T05:36:01.139Z",
+      "lastRecalledAt": "2026-04-10T05:36:01.139Z",
+      "queryHashes": [
+        "63efa2a0b9bb"
+      ],
+      "recallDays": [
+        "2026-03-08"
+      ],
+      "conceptTags": [
+        "workerstatus",
+        "tracking",
+        "state",
+        "progress",
+        "current",
+        "timing"
+      ],
+      "claimHash": "5c6337ccda38"
+    },
+    "memory:memory/2026-03-09.md:68:68:b563608c8d20": {
+      "key": "memory:memory/2026-03-09.md:68:68:b563608c8d20",
+      "path": "memory/2026-03-09.md",
+      "startLine": 68,
+      "endLine": 68,
+      "source": "memory",
+      "snippet": "Always-on thinking — role-specific idle thoughts",
+      "recallCount": 0,
+      "dailyCount": 0,
+      "groundedCount": 2,
+      "totalScore": 1.84,
+      "maxScore": 0.92,
+      "firstRecalledAt": "2026-04-10T05:36:01.139Z",
+      "lastRecalledAt": "2026-04-10T05:36:01.139Z",
+      "queryHashes": [
+        "63efa2a0b9bb"
+      ],
+      "recallDays": [
+        "2026-03-09"
+      ],
+      "conceptTags": [
+        "always-on",
+        "role-specific",
+        "always",
+        "thinking",
+        "role",
+        "specific",
+        "idle",
+        "thoughts"
+      ],
+      "claimHash": "b563608c8d20"
+    },
+    "memory:memory/2026-03-09.md:68:68:7da0a350e4e4": {
+      "key": "memory:memory/2026-03-09.md:68:68:7da0a350e4e4",
+      "path": "memory/2026-03-09.md",
+      "startLine": 68,
+      "endLine": 68,
+      "source": "memory",
+      "snippet": "Always-on thinking — zero dormancy",
+      "recallCount": 0,
+      "dailyCount": 0,
+      "groundedCount": 2,
+      "totalScore": 1.84,
+      "maxScore": 0.92,
+      "firstRecalledAt": "2026-04-10T05:36:01.139Z",
+      "lastRecalledAt": "2026-04-10T05:36:01.139Z",
+      "queryHashes": [
+        "63efa2a0b9bb"
+      ],
+      "recallDays": [
+        "2026-03-09"
+      ],
+      "conceptTags": [
+        "always-on",
+        "always",
+        "thinking",
+        "zero",
+        "dormancy"
+      ],
+      "claimHash": "7da0a350e4e4"
+    },
+    "memory:memory/2026-03-09.md:276:276:9f8e10a95cdc": {
+      "key": "memory:memory/2026-03-09.md:276:276:9f8e10a95cdc",
+      "path": "memory/2026-03-09.md",
+      "startLine": 276,
+      "endLine": 276,
+      "source": "memory",
+      "snippet": "Finalizing the \"Time Awareness\" and \"Always-on Thinking\" logic improvements.",
+      "recallCount": 0,
+      "dailyCount": 0,
+      "groundedCount": 2,
+      "totalScore": 1.84,
+      "maxScore": 0.92,
+      "firstRecalledAt": "2026-04-10T05:36:01.139Z",
+      "lastRecalledAt": "2026-04-10T05:36:01.139Z",
+      "queryHashes": [
+        "63efa2a0b9bb"
+      ],
+      "recallDays": [
+        "2026-03-09"
+      ],
+      "conceptTags": [
+        "always-on",
+        "finalizing",
+        "the",
+        "time",
+        "awareness",
+        "always",
+        "thinking",
+        "logic"
+      ],
+      "claimHash": "9f8e10a95cdc"
+    },
+    "memory:memory/2026-03-10.md:32:32:de7819a1ecce": {
+      "key": "memory:memory/2026-03-10.md:32:32:de7819a1ecce",
+      "path": "memory/2026-03-10.md",
+      "startLine": 32,
+      "endLine": 32,
+      "source": "memory",
+      "snippet": "Isaac Sim Python 3.11 != system Python 3.14 — always use isaaclab.sh -p",
+      "recallCount": 0,
+      "dailyCount": 0,
+      "groundedCount": 3,
+      "totalScore": 2.66,
+      "maxScore": 0.92,
+      "firstRecalledAt": "2026-04-10T05:36:01.139Z",
+      "lastRecalledAt": "2026-04-10T05:36:01.139Z",
+      "queryHashes": [
+        "63efa2a0b9bb",
+        "a45a74b97294"
+      ],
+      "recallDays": [
+        "2026-03-10"
+      ],
+      "conceptTags": [
+        "3.11",
+        "3.14",
+        "isaaclab.sh",
+        "isaac",
+        "sim",
+        "python",
+        "system",
+        "always"
+      ],
+      "claimHash": "de7819a1ecce"
+    },
+    "memory:memory/2026-03-11.md:116:116:c861e40292a4": {
+      "key": "memory:memory/2026-03-11.md:116:116:c861e40292a4",
+      "path": "memory/2026-03-11.md",
+      "startLine": 116,
+      "endLine": 116,
+      "source": "memory",
+      "snippet": "Preference pairs saved via /api/voice/pair for potential RLHF training data",
+      "recallCount": 0,
+      "dailyCount": 0,
+      "groundedCount": 3,
+      "totalScore": 2.66,
+      "maxScore": 0.92,
+      "firstRecalledAt": "2026-04-10T05:36:01.139Z",
+      "lastRecalledAt": "2026-04-10T05:36:01.139Z",
+      "queryHashes": [
+        "63efa2a0b9bb",
+        "a45a74b97294"
+      ],
+      "recallDays": [
+        "2026-03-11"
+      ],
+      "conceptTags": [
+        "api/voice/pair",
+        "preference",
+        "pairs",
+        "saved",
+        "via",
+        "api",
+        "voice",
+        "pair"
+      ],
+      "claimHash": "c861e40292a4"
+    },
+    "memory:memory/2026-03-13.md:129:129:017b6b12a1d2": {
+      "key": "memory:memory/2026-03-13.md:129:129:017b6b12a1d2",
+      "path": "memory/2026-03-13.md",
+      "startLine": 129,
+      "endLine": 129,
+      "source": "memory",
+      "snippet": "Key insight: the solution isn't \"try harder\" but \"try less with better support\" — structured rails, capability boundaries, bigger model as mentor",
+      "recallCount": 0,
+      "dailyCount": 0,
+      "groundedCount": 2,
+      "totalScore": 1.84,
+      "maxScore": 0.92,
+      "firstRecalledAt": "2026-04-10T05:36:01.139Z",
+      "lastRecalledAt": "2026-04-10T05:36:01.139Z",
+      "queryHashes": [
+        "63efa2a0b9bb"
+      ],
+      "recallDays": [
+        "2026-03-13"
+      ],
+      "conceptTags": [
+        "key",
+        "insight",
+        "the",
+        "solution",
+        "isn't",
+        "try",
+        "harder",
+        "but"
+      ],
+      "claimHash": "017b6b12a1d2"
+    },
+    "memory:memory/2026-03-14.md:127:127:2f4e8f6e9aa8": {
+      "key": "memory:memory/2026-03-14.md:127:127:2f4e8f6e9aa8",
+      "path": "memory/2026-03-14.md",
+      "startLine": 127,
+      "endLine": 127,
+      "source": "memory",
+      "snippet": "System prompt boundaries: explicitly tells agent it can only build ON TOP of app, never modify it",
+      "recallCount": 0,
+      "dailyCount": 0,
+      "groundedCount": 3,
+      "totalScore": 2.66,
+      "maxScore": 0.92,
+      "firstRecalledAt": "2026-04-10T05:36:01.139Z",
+      "lastRecalledAt": "2026-04-10T05:36:01.139Z",
+      "queryHashes": [
+        "63efa2a0b9bb",
+        "a45a74b97294"
+      ],
+      "recallDays": [
+        "2026-03-14"
+      ],
+      "conceptTags": [
+        "system",
+        "prompt",
+        "boundaries",
+        "explicitly",
+        "tells",
+        "can",
+        "only",
+        "top"
+      ],
+      "claimHash": "2f4e8f6e9aa8"
+    },
+    "memory:memory/2026-03-16.md:483:483:bc1df95088ee": {
+      "key": "memory:memory/2026-03-16.md:483:483:bc1df95088ee",
+      "path": "memory/2026-03-16.md",
+      "startLine": 483,
+      "endLine": 483,
+      "source": "memory",
+      "snippet": "Protected apps: Clawboard + Commands API always running",
+      "recallCount": 0,
+      "dailyCount": 0,
+      "groundedCount": 2,
+      "totalScore": 1.84,
+      "maxScore": 0.92,
+      "firstRecalledAt": "2026-04-10T05:36:01.139Z",
+      "lastRecalledAt": "2026-04-10T05:36:01.139Z",
+      "queryHashes": [
+        "63efa2a0b9bb"
+      ],
+      "recallDays": [
+        "2026-03-16"
+      ],
+      "conceptTags": [
+        "protected",
+        "apps",
+        "clawboard",
+        "commands",
+        "api",
+        "always",
+        "running"
+      ],
+      "claimHash": "bc1df95088ee"
+    },
+    "memory:memory/2026-03-18.md:60:60:e2625c046de7": {
+      "key": "memory:memory/2026-03-18.md:60:60:e2625c046de7",
+      "path": "memory/2026-03-18.md",
+      "startLine": 60,
+      "endLine": 60,
+      "source": "memory",
+      "snippet": "\"Archive before delete, always recoverable\" approach",
+      "recallCount": 0,
+      "dailyCount": 0,
+      "groundedCount": 2,
+      "totalScore": 1.84,
+      "maxScore": 0.92,
+      "firstRecalledAt": "2026-04-10T05:36:01.139Z",
+      "lastRecalledAt": "2026-04-10T05:36:01.139Z",
+      "queryHashes": [
+        "63efa2a0b9bb"
+      ],
+      "recallDays": [
+        "2026-03-18"
+      ],
+      "conceptTags": [
+        "archive",
+        "delete",
+        "always",
+        "recoverable",
+        "approach"
+      ],
+      "claimHash": "e2625c046de7"
+    },
+    "memory:memory/2026-03-19.md:43:43:900b76044963": {
+      "key": "memory:memory/2026-03-19.md:43:43:900b76044963",
+      "path": "memory/2026-03-19.md",
+      "startLine": 43,
+      "endLine": 43,
+      "source": "memory",
+      "snippet": "Prefers corrections applied before moving forward",
+      "recallCount": 0,
+      "dailyCount": 0,
+      "groundedCount": 3,
+      "totalScore": 2.66,
+      "maxScore": 0.92,
+      "firstRecalledAt": "2026-04-10T05:36:01.139Z",
+      "lastRecalledAt": "2026-04-10T05:36:01.139Z",
+      "queryHashes": [
+        "63efa2a0b9bb",
+        "a45a74b97294"
+      ],
+      "recallDays": [
+        "2026-03-19"
+      ],
+      "conceptTags": [
+        "prefers",
+        "corrections",
+        "applied",
+        "moving",
+        "forward"
+      ],
+      "claimHash": "900b76044963"
+    },
+    "memory:memory/2026-04-05.md:120:120:3b5bc6a47247": {
+      "key": "memory:memory/2026-04-05.md:120:120:3b5bc6a47247",
+      "path": "memory/2026-04-05.md",
+      "startLine": 120,
+      "endLine": 120,
+      "source": "memory",
+      "snippet": "Pat requested lower temperature for local voice (Sesame CSM-1B) and Set temp from default to 0.7 — less creative/mumbling, clearer speech",
+      "recallCount": 0,
+      "dailyCount": 0,
+      "groundedCount": 2,
+      "totalScore": 1.84,
+      "maxScore": 0.92,
+      "firstRecalledAt": "2026-04-10T05:36:01.139Z",
+      "lastRecalledAt": "2026-04-10T05:36:01.139Z",
+      "queryHashes": [
+        "63efa2a0b9bb"
+      ],
+      "recallDays": [
+        "2026-04-05"
+      ],
+      "conceptTags": [
+        "csm-1b",
+        "0.7",
+        "creative/mumbling",
+        "pat",
+        "requested",
+        "lower",
+        "temperature",
+        "local"
+      ],
+      "claimHash": "3b5bc6a47247"
+    },
+    "memory:memory/2026-04-06.md:113:113:eb067cf03eba": {
+      "key": "memory:memory/2026-04-06.md:113:113:eb067cf03eba",
+      "path": "memory/2026-04-06.md",
+      "startLine": 113,
+      "endLine": 113,
+      "source": "memory",
+      "snippet": "Always test on actual model before swapping production server",
+      "recallCount": 0,
+      "dailyCount": 0,
+      "groundedCount": 2,
+      "totalScore": 1.84,
+      "maxScore": 0.92,
+      "firstRecalledAt": "2026-04-10T05:36:01.139Z",
+      "lastRecalledAt": "2026-04-10T05:36:01.139Z",
+      "queryHashes": [
+        "63efa2a0b9bb"
+      ],
+      "recallDays": [
+        "2026-04-06"
+      ],
+      "conceptTags": [
+        "always",
+        "test",
+        "actual",
+        "model",
+        "swapping",
+        "production",
+        "server"
+      ],
+      "claimHash": "eb067cf03eba"
+    },
+    "memory:memory/2026-04-07.md:18:18:76c9a07be2e3": {
+      "key": "memory:memory/2026-04-07.md:18:18:76c9a07be2e3",
+      "path": "memory/2026-04-07.md",
+      "startLine": 18,
+      "endLine": 18,
+      "source": "memory",
+      "snippet": "Single continuation at a time, always named gemma-continue",
+      "recallCount": 0,
+      "dailyCount": 0,
+      "groundedCount": 2,
+      "totalScore": 1.84,
+      "maxScore": 0.92,
+      "firstRecalledAt": "2026-04-10T05:36:01.139Z",
+      "lastRecalledAt": "2026-04-10T05:36:01.139Z",
+      "queryHashes": [
+        "63efa2a0b9bb"
+      ],
+      "recallDays": [
+        "2026-04-07"
+      ],
+      "conceptTags": [
+        "gemma-continue",
+        "single",
+        "continuation",
+        "time",
+        "always",
+        "named",
+        "gemma",
+        "continue"
+      ],
+      "claimHash": "76c9a07be2e3"
+    },
+    "memory:memory/2026-04-07.md:52:52:039a9b8d00e0": {
+      "key": "memory:memory/2026-04-07.md:52:52:039a9b8d00e0",
+      "path": "memory/2026-04-07.md",
+      "startLine": 52,
+      "endLine": 52,
+      "source": "memory",
+      "snippet": "W = wallet (always ? for local models, no billing)",
+      "recallCount": 0,
+      "dailyCount": 0,
+      "groundedCount": 2,
+      "totalScore": 1.84,
+      "maxScore": 0.92,
+      "firstRecalledAt": "2026-04-10T05:36:01.139Z",
+      "lastRecalledAt": "2026-04-10T05:36:01.139Z",
+      "queryHashes": [
+        "63efa2a0b9bb"
+      ],
+      "recallDays": [
+        "2026-04-07"
+      ],
+      "conceptTags": [
+        "wallet",
+        "always",
+        "local",
+        "models",
+        "billing"
+      ],
+      "claimHash": "039a9b8d00e0"
+    },
+    "memory:memory/2026-04-08.md:49:49:880dd6688825": {
+      "key": "memory:memory/2026-04-08.md:49:49:880dd6688825",
+      "path": "memory/2026-04-08.md",
+      "startLine": 49,
+      "endLine": 49,
+      "source": "memory",
+      "snippet": "Lesson: Always validate with openclaw doctor BEFORE restarting gateway",
+      "recallCount": 0,
+      "dailyCount": 0,
+      "groundedCount": 2,
+      "totalScore": 1.84,
+      "maxScore": 0.92,
+      "firstRecalledAt": "2026-04-10T05:36:01.139Z",
+      "lastRecalledAt": "2026-04-10T05:36:01.139Z",
+      "queryHashes": [
+        "63efa2a0b9bb"
+      ],
+      "recallDays": [
+        "2026-04-08"
+      ],
+      "conceptTags": [
+        "gateway",
+        "lesson",
+        "always",
+        "validate",
+        "openclaw",
+        "doctor",
+        "restarting"
+      ],
+      "claimHash": "880dd6688825"
+    }
+  }
+}
