@@ -1,0 +1,14 @@
+[Unit]
+Description=Memory Concierge — unified RAG service (port 8102)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /home/pmello/.openclaw/workspace-main/tools/memory-concierge/concierge.py
+WorkingDirectory=/home/pmello/.openclaw/workspace-main/tools/memory-concierge
+Environment=HOME=/home/pmello
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target
