@@ -1,2 +1,0 @@
-[q35/sessions/eff61c02-2791-4f5c-969d-c9cdaff2c066.jsonl#L1429] User: Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK. When reading HEARTBEAT.md, use workspace file /home/pmello/.openclaw/workspace-q35/HEARTBEAT.md (exact 
-[q35/sessions/eff61c02-2791-4f5c-969d-c9cdaff2c066.jsonl#L1436] Assistant: HEARTBEAT_OK
