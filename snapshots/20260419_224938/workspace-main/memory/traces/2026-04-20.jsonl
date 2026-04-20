@@ -1,0 +1,6 @@
+{"ts":"2026-04-20T02:48:25","agent":"main","task":"research-synthesis","model":"anthropic/claude-opus-4-6","tokens_in":8000,"tokens_out":12000,"duration_s":45,"success":true,"error":null,"context":"26-video research synthesis"}
+{"ts":"2026-04-20T02:48:25","agent":"main","task":"model-fallback-config","model":"anthropic/claude-opus-4-6","tokens_in":500,"tokens_out":300,"duration_s":5,"success":true,"error":null,"context":"configured fallback chain"}
+{"ts":"2026-04-20T02:48:25","agent":"main","task":"llama-main-fix","model":"anthropic/claude-opus-4-6","tokens_in":200,"tokens_out":400,"duration_s":3,"success":true,"error":null,"context":"enabled llama-main autostart"}
+{"ts":"2026-04-20T02:48:25","agent":"main","task":"coral-install","model":"anthropic/claude-opus-4-6","tokens_in":1000,"tokens_out":2000,"duration_s":30,"success":true,"error":null,"context":"installed CORAL + claw-code runtime"}
+{"ts":"2026-04-20T02:48:25","agent":"main","task":"builder-palace-seed","model":"anthropic/claude-opus-4-6","tokens_in":3000,"tokens_out":5000,"duration_s":20,"success":true,"error":null,"context":"seeded 15 builder-toolkit drawers"}
+{"ts":"2026-04-20T02:48:25","agent":"main","task":"chat-response","model":"anthropic/claude-opus-4-6","tokens_in":100,"tokens_out":0,"duration_s":0,"success":false,"error":"service_overloaded","context":"Anthropic overload at 19:15 EDT"}
