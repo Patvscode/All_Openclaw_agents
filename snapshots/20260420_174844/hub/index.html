@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🦞 Clawboard</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: system-ui, -apple-system, sans-serif; background: #080810; color: #e0e0e0; min-height: 100vh; padding: 0.75rem; }
+
+/* ─── Header ─── */
+.hdr { text-align: center; padding: 0.75rem 0 0.5rem; }
+.hdr h1 { font-size: 1.4rem; margin-bottom: 0.15rem; background: linear-gradient(135deg, #a855f7, #3b82f6, #76b900); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; }
+.hdr .sub { color: #555; font-size: 0.7rem; }
+.hdr .status { font-size: 0.6rem; color: #444; margin-top: 0.2rem; }
+.hdr .dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #40a02b; margin-right: 3px; animation: pulse 2s infinite; }
+.hdr .health-summary { font-size: 0.55rem; color: #555; margin-top: 0.15rem; transition: color 0.3s; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+/* ─── Search ─── */
+.search-wrap { max-width: 500px; margin: 0.5rem auto 0.75rem; position: relative; }
+.search-input {
+  width: 100%; background: #0e0e1a; border: 1px solid #1a1a2e; border-radius: 10px;
+  padding: 0.55rem 0.75rem 0.55rem 2rem; color: #e0e0e0; font-size: 0.85rem;
+  outline: none; transition: border-color 0.2s;
+}
+.search-input:focus { border-color: #a855f7; }
+.search-input::placeholder { color: #444; }
+.search-icon { position: absolute; left: 0.65rem; top: 50%; transform: translateY(-50%); font-size: 0.8rem; color: #444; pointer-events: none; }
+
+/* ─── Category Tabs ─── */
+.tabs { display: flex; gap: 0.3rem; overflow-x: auto; padding-bottom: 0.5rem; margin-bottom: 0.5rem; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  padding: 0.3rem 0.65rem; border-radius: 8px; font-size: 0.65rem; font-weight: 600;
+  white-space: nowrap; cursor: pointer; transition: all 0.2s;
+  background: #0e0e1a; border: 1px solid #1a1a2e; color: #666;
+}
+.tab:hover { border-color: #a855f7; color: #aaa; }
+.tab.active { background: #a855f720; border-color: #a855f7; color: #a855f7; }
+.tab .tab-count { font-size: 0.5rem; opacity: 0.6; margin-left: 0.2rem; }
+
+/* ─── Grid ─── */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem; max-width: 1000px; margin: 0 auto; }
+
+/* ─── Compact Card ─── */
+.card {
+  background: #0e0e1a; border-radius: 10px; padding: 0.6rem 0.7rem;
+  border: 1px solid #1a1a2e; transition: all 0.2s; text-decoration: none;
+  color: inherit; display: flex; flex-direction: column; gap: 0.2rem;
+  position: relative;
+}
+.card:hover { border-color: #a855f7; transform: translateY(-1px); box-shadow: 0 2px 12px #a855f710; }
+.card:active { transform: scale(0.98); }
+.card .emoji { font-size: 1.3rem; }
+.card h2 { font-size: 0.75rem; color: #fff; line-height: 1.2; font-weight: 600; }
+.card p { color: #555; font-size: 0.6rem; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card .tags { display: flex; flex-wrap: wrap; gap: 0.2rem; margin-top: auto; }
+.tag { background: #12121e; border: 1px solid #222; border-radius: 8px; padding: 0.05rem 0.35rem; font-size: 0.5rem; color: #555; }
+
+/* ─── Health indicator dot ─── */
+.health-dot {
+  position: absolute; top: 0.45rem; right: 0.5rem;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #333; transition: background 0.3s;
+}
+.health-dot.healthy { background: #40a02b; }
+.health-dot.degraded { background: #f59e0b; }
+.health-dot.down { background: #ef4444; }
+.health-dot.unknown { background: #333; }
+
+/* ─── Section Label ─── */
+.section-label {
+  font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1.5px;
+  color: #444; margin: 0.75rem auto 0.35rem; max-width: 1000px;
+  padding-left: 0.15rem; font-weight: 600;
+}
+
+/* ─── No Results ─── */
+.no-results { text-align: center; padding: 2rem; color: #444; font-size: 0.8rem; display: none; }
+
+/* ─── Footer ─── */
+.footer { text-align: center; margin-top: 1.5rem; padding-bottom: 1rem; color: #333; font-size: 0.6rem; line-height: 1.8; }
+.footer a { color: #555; }
+
+.card.hidden { display: none; }
+
+/* ─── Mobile: 2 columns minimum ─── */
+@media (max-width: 400px) { .grid { grid-template-columns: repeat(2, 1fr); gap: 0.4rem; } }
+@media (min-width: 401px) and (max-width: 768px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 769px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <h1>🦞 Clawboard</h1>
+  <div class="sub">Agent Hub · DGX Spark</div>
+  <div class="status"><span class="dot"></span>Multi-Agent Local/Cloud · Tailscale Private</div>
+  <div class="health-summary" id="healthSummary">Checking services…</div>
+</div>
+
+<div class="search-wrap">
+  <span class="search-icon">🔍</span>
+  <input type="text" class="search-input" id="search" placeholder="Search apps..." oninput="filterCards()">
+</div>
+
+<div class="tabs" id="tabs"></div>
+
+<div id="appContainer"></div>
+
+<div class="no-results" id="noResults">No apps found</div>
+
+<div class="footer">
+  🦞 Clawboard · Built by the OpenClaw agent team<br>
+  NVIDIA DGX Spark · <a href="how-it-was-done.html">How it was done</a> · <a href="app-registry.json">Registry</a>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════
+   Registry-driven Clawboard
+   Source of truth: app-registry.json
+   ═══════════════════════════════════════════ */
+
+let registry = null;
+let activeTab = 'all';
+let healthState = {};  // serviceId → true/false/null
+
+async function init() {
+  try {
+    const res = await fetch('app-registry.json?_=' + Date.now());
+    registry = await res.json();
+  } catch (e) {
+    document.getElementById('appContainer').innerHTML =
+      '<p style="color:#f44;text-align:center;padding:2rem">Failed to load app-registry.json</p>';
+    return;
+  }
+
+  buildTabs();
+  buildCards();
+  runHealthChecks();
+  // Re-check health every 60s
+  setInterval(runHealthChecks, 60000);
+}
+
+/* ─── Tabs ─── */
+function buildTabs() {
+  const container = document.getElementById('tabs');
+  const cats = registry.categories.sort((a, b) => a.order - b.order);
+  const allCount = registry.apps.length;
+
+  let html = `<div class="tab active" data-cat="all" onclick="setTab('all')">All <span class="tab-count">${allCount}</span></div>`;
+  for (const cat of cats) {
+    const count = registry.apps.filter(a => a.category === cat.id).length;
+    html += `<div class="tab" data-cat="${cat.id}" onclick="setTab('${cat.id}')">${cat.label} <span class="tab-count">${count}</span></div>`;
+  }
+  container.innerHTML = html;
+}
+
+/* ─── Cards ─── */
+function buildCards() {
+  const container = document.getElementById('appContainer');
+  const cats = registry.categories.sort((a, b) => a.order - b.order);
+  let html = '';
+
+  for (const cat of cats) {
+    const apps = registry.apps.filter(a => a.category === cat.id);
+    if (!apps.length) continue;
+
+    html += `<div class="section-label cat-label" data-cat="${cat.id}">${cat.label}</div>`;
+    html += `<div class="grid" data-cat="${cat.id}">`;
+
+    for (const app of apps) {
+      const accent = app.accent ? `border-color:${app.accent};background:linear-gradient(135deg,#0e0e1a,${app.accent}12)` : '';
+      const onclick = app.onclick ? `onclick="${app.onclick}"` : '';
+      const tagHtml = (app.tags || []).map(t => {
+        const cls = t === 'game' ? 'game' : t === 'tool' ? 'tool' : t === 'archive' ? '' : '';
+        return `<span class="tag ${cls}">${t}</span>`;
+      }).join('');
+
+      html += `<a class="card" href="${app.href}" data-cat="${app.category}" data-id="${app.id}" data-search="${app.search || ''}" style="${accent}" ${onclick}>
+        <div class="health-dot unknown" data-app="${app.id}"></div>
+        <span class="emoji">${app.emoji}</span>
+        <h2>${app.title}</h2>
+        <p>${app.description}</p>
+        ${tagHtml ? `<div class="tags">${tagHtml}</div>` : ''}
+      </a>`;
+    }
+    html += '</div>';
+  }
+  container.innerHTML = html;
+}
+
+/* ─── Health Checks ─── */
+async function runHealthChecks() {
+  const results = {};
+
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 5000);
+    const res = await fetch('/api/clawboard/health?_=' + Date.now(), { signal: ctrl.signal });
+    clearTimeout(timer);
+    const data = await res.json();
+    for (const [id, service] of Object.entries(data.services || {})) {
+      results[id] = !!service.ok;
+    }
+  } catch {
+    for (const id of Object.keys(registry.serviceEndpoints || {})) {
+      results[id] = false;
+    }
+  }
+  healthState = results;
+
+  // Update per-app health dots
+  for (const app of registry.apps) {
+    const dot = document.querySelector(`.health-dot[data-app="${app.id}"]`);
+    if (!dot) continue;
+
+    const deps = app.healthDeps || [];
+    if (deps.length === 0) {
+      dot.className = 'health-dot healthy'; // no deps = static, always ok
+      continue;
+    }
+
+    const states = deps.map(d => healthState[d]);
+    const up = states.filter(s => s === true).length;
+    const down = states.filter(s => s === false).length;
+
+    if (up === deps.length) {
+      dot.className = 'health-dot healthy';
+    } else if (down === deps.length) {
+      dot.className = 'health-dot down';
+    } else if (up > 0) {
+      dot.className = 'health-dot degraded';
+    } else {
+      dot.className = 'health-dot unknown';
+    }
+  }
+
+  // Update header summary
+  const allIds = Object.keys(results);
+  const upCount = allIds.filter(id => results[id]).length;
+  const downCount = allIds.filter(id => !results[id]).length;
+  const summary = document.getElementById('healthSummary');
+  summary.textContent = `${upCount}/${allIds.length} services reachable`;
+  summary.style.color = downCount === 0 ? '#40a02b' : downCount <= 3 ? '#f59e0b' : '#ef4444';
+}
+
+/* ─── Tab switching ─── */
+function setTab(cat) {
+  activeTab = cat;
+  document.querySelectorAll('.tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.cat === cat)
+  );
+  filterCards();
+}
+
+/* ─── Search & filter ─── */
+function filterCards() {
+  const q = document.getElementById('search').value.toLowerCase().trim();
+  let visible = 0;
+
+  document.querySelectorAll('.card').forEach(card => {
+    const cat = card.dataset.cat;
+    const search = (card.dataset.search || '') + ' ' + card.textContent.toLowerCase();
+    const matchTab = activeTab === 'all' || cat === activeTab;
+    const matchSearch = !q || search.includes(q);
+    const show = matchTab && matchSearch;
+    card.classList.toggle('hidden', !show);
+    if (show) visible++;
+  });
+
+  // Show/hide section labels and grids
+  document.querySelectorAll('.cat-label').forEach(label => {
+    const cat = label.dataset.cat;
+    if (activeTab !== 'all' && cat !== activeTab) {
+      label.style.display = 'none';
+      return;
+    }
+    const grid = document.querySelector(`.grid[data-cat="${cat}"]`);
+    const hasVisible = grid ? [...grid.querySelectorAll('.card')].some(c => !c.classList.contains('hidden')) : false;
+    label.style.display = hasVisible ? '' : 'none';
+  });
+
+  document.getElementById('noResults').style.display = visible === 0 ? 'block' : 'none';
+}
+
+init();
+</script>
+</body>
+</html>
