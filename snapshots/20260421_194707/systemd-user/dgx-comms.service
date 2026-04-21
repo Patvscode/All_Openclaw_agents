@@ -1,0 +1,14 @@
+[Unit]
+Description=DGX Agent Comms API (port 8096)
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pmello/.openclaw/comms/web
+ExecStart=/usr/bin/python3 /home/pmello/.openclaw/comms/web/server.py
+Restart=on-failure
+RestartSec=3
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target
