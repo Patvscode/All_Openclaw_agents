@@ -1,0 +1,11 @@
+[Unit]
+Description=OpenClaw Resilience Cycle
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/pmello/bin/openclaw-resilience-cycle
+Environment=HOME=/home/pmello
+Environment=PATH=/usr/bin:/home/pmello/.local/bin:/home/pmello/.npm-global/bin:/home/pmello/bin:/home/pmello/.volta/bin:/home/pmello/.asdf/shims:/home/pmello/.bun/bin:/home/pmello/.nvm/current/bin:/home/pmello/.fnm/current/bin:/home/pmello/.local/share/pnpm:/usr/local/bin:/bin
+
