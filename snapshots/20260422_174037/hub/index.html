@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🦞 Clawboard</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: system-ui, -apple-system, sans-serif; background: #080810; color: #e0e0e0; min-height: 100vh; padding: 0.75rem; }
+
+/* ─── Header ─── */
+.hdr { text-align: center; padding: 0.75rem 0 0.5rem; }
+.hdr h1 { font-size: 1.4rem; margin-bottom: 0.15rem; background: linear-gradient(135deg, #a855f7, #3b82f6, #76b900); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; }
+.hdr .sub { color: #555; font-size: 0.7rem; }
+.hdr .status { font-size: 0.6rem; color: #444; margin-top: 0.2rem; }
+.hdr .dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #40a02b; margin-right: 3px; animation: pulse 2s infinite; }
+.hdr .health-summary { font-size: 0.55rem; color: #555; margin-top: 0.15rem; transition: color 0.3s; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+/* ─── Health Filters ─── */
+.health-filter {
+  max-width: 720px; margin: 0 auto 0.65rem; display: flex; flex-wrap: wrap;
+  justify-content: center; gap: 0.3rem;
+}
+.health-filter button {
+  display: inline-flex; align-items: center; gap: 0.3rem; min-height: 28px;
+  background: #0e0e1a; border: 1px solid #1a1a2e; border-radius: 8px;
+  color: #777; font: inherit; font-size: 0.58rem; font-weight: 700;
+  padding: 0.22rem 0.55rem; cursor: pointer; transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+.health-filter button:hover { border-color: #76b900; color: #c7d2fe; }
+.health-filter button.active { background: #142012; border-color: #76b900; color: #b7f36d; }
+.health-filter .mini-dot { width: 6px; height: 6px; border-radius: 50%; background: #333; }
+.health-filter .mini-dot.reachable { background: #40a02b; }
+.health-filter .mini-dot.degraded { background: #f59e0b; }
+.health-filter .mini-dot.down { background: #ef4444; }
+.health-filter .mini-dot.static { background: #64748b; }
+.health-filter .mini-dot.unknown { background: #333; }
+
+/* ─── Search ─── */
+.search-wrap { max-width: 500px; margin: 0.5rem auto 0.75rem; position: relative; }
+.search-input {
+  width: 100%; background: #0e0e1a; border: 1px solid #1a1a2e; border-radius: 10px;
+  padding: 0.55rem 0.75rem 0.55rem 2rem; color: #e0e0e0; font-size: 0.85rem;
+  outline: none; transition: border-color 0.2s;
+}
+.search-input:focus { border-color: #a855f7; }
+.search-input::placeholder { color: #444; }
+.search-icon { position: absolute; left: 0.65rem; top: 50%; transform: translateY(-50%); font-size: 0.8rem; color: #444; pointer-events: none; }
+
+/* ─── Action Queue ─── */
+.action-queue {
+  max-width: 1000px; margin: 0 auto 0.85rem; padding: 0.75rem 0.8rem;
+  background: linear-gradient(180deg, #10121c, #0b0d15); border: 1px solid #1f2335;
+  border-radius: 12px; display: grid; gap: 0.6rem;
+}
+.action-queue-head { display: flex; justify-content: space-between; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+.action-queue-head h2 { font-size: 0.78rem; color: #f8fafc; }
+.action-queue-head p { font-size: 0.62rem; color: #7c8599; }
+.action-queue-controls { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.action-btn {
+  min-height: 30px; border-radius: 8px; border: 1px solid #29314d; background: #12182a; color: #cbd5e1;
+  font: inherit; font-size: 0.62rem; font-weight: 700; padding: 0.3rem 0.6rem; cursor: pointer;
+}
+.action-btn:hover { border-color: #76b900; color: #f8fafc; }
+.action-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.55rem; }
+.action-box { border: 1px solid #1e2438; border-radius: 10px; padding: 0.65rem; background: #0e1220; }
+.action-box h3 { font-size: 0.68rem; color: #f8fafc; margin-bottom: 0.35rem; }
+.action-box p { font-size: 0.58rem; color: #74809b; margin-bottom: 0.35rem; }
+.selection-list { min-height: 1.1rem; font-size: 0.62rem; color: #dbe4f0; line-height: 1.45; }
+.selection-list.empty { color: #59657d; }
+.queue-status { font-size: 0.58rem; color: #7c8599; }
+.prompt-box {
+  width: 100%; min-height: 78px; resize: vertical; border-radius: 10px; border: 1px solid #1f2335;
+  background: #090c15; color: #dbe4f0; padding: 0.65rem; font: inherit; font-size: 0.62rem; line-height: 1.45;
+}
+.prompt-box.notes-box { min-height: 64px; }
+.prompt-box[readonly] { color: #b8c3d8; }
+.prompt-label { display: block; font-size: 0.56rem; color: #7c8599; margin: 0.45rem 0 0.2rem; }
+
+@media (max-width: 640px) {
+  .action-queue { padding: 0.7rem; }
+}
+
+/* ─── Category Tabs ─── */
+.tabs { display: flex; gap: 0.3rem; overflow-x: auto; padding-bottom: 0.5rem; margin-bottom: 0.5rem; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  padding: 0.3rem 0.65rem; border-radius: 8px; font-size: 0.65rem; font-weight: 600;
+  white-space: nowrap; cursor: pointer; transition: all 0.2s;
+  background: #0e0e1a; border: 1px solid #1a1a2e; color: #666;
+}
+.tab:hover { border-color: #a855f7; color: #aaa; }
+.tab.active { background: #a855f720; border-color: #a855f7; color: #a855f7; }
+.tab .tab-count { font-size: 0.5rem; opacity: 0.6; margin-left: 0.2rem; }
+
+/* ─── Grid ─── */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem; max-width: 1000px; margin: 0 auto; }
+
+/* ─── Compact Card ─── */
+.card {
+  background: #0e0e1a; border-radius: 10px; padding: 0.6rem 0.7rem;
+  border: 1px solid #1a1a2e; transition: all 0.2s; text-decoration: none;
+  color: inherit; display: flex; flex-direction: column; gap: 0.2rem;
+  position: relative;
+}
+.card:hover { border-color: #a855f7; transform: translateY(-1px); box-shadow: 0 2px 12px #a855f710; }
+.card:active { transform: scale(0.98); }
+.card .emoji { font-size: 1.3rem; }
+.card h2 { font-size: 0.75rem; color: #fff; line-height: 1.2; font-weight: 600; }
+.card p { color: #555; font-size: 0.6rem; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card .tags { display: flex; flex-wrap: wrap; gap: 0.2rem; margin-top: auto; }
+.tag { background: #12121e; border: 1px solid #222; border-radius: 8px; padding: 0.05rem 0.35rem; font-size: 0.5rem; color: #555; }
+.card-actions {
+  display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center; margin-top: 0.35rem;
+}
+.action-chip {
+  display: inline-flex; align-items: center; gap: 0.28rem; min-height: 24px; padding: 0.14rem 0.38rem;
+  border-radius: 999px; border: 1px solid #232a42; background: #12182a; color: #90a0bd;
+  font-size: 0.54rem; font-weight: 700;
+}
+.action-chip input { accent-color: #76b900; width: 12px; height: 12px; }
+.action-chip[data-kind="recover"] input { accent-color: #f59e0b; }
+.action-chip.disabled { opacity: 0.45; }
+.card[data-queue-recover="true"] { border-color: #f59e0b; box-shadow: inset 0 0 0 1px #f59e0b33; }
+.card[data-queue-edit="true"] { box-shadow: inset 0 0 0 1px #60a5fa33; }
+.card[data-queue-recover="true"][data-queue-edit="true"] { box-shadow: inset 0 0 0 1px #f59e0b33, inset 0 0 0 2px #60a5fa22; }
+
+/* ─── Health indicator dot ─── */
+.health-dot {
+  position: absolute; top: 0.45rem; right: 0.5rem;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #333; transition: background 0.3s;
+}
+.health-dot.healthy { background: #40a02b; }
+.health-dot.degraded { background: #f59e0b; }
+.health-dot.down { background: #ef4444; }
+.health-dot.static { background: #64748b; }
+.health-dot.unknown { background: #333; }
+
+/* ─── Section Label ─── */
+.section-label {
+  font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1.5px;
+  color: #444; margin: 0.75rem auto 0.35rem; max-width: 1000px;
+  padding-left: 0.15rem; font-weight: 600;
+}
+
+/* ─── No Results ─── */
+.no-results { text-align: center; padding: 2rem; color: #444; font-size: 0.8rem; display: none; }
+
+/* ─── Footer ─── */
+.footer { text-align: center; margin-top: 1.5rem; padding-bottom: 1rem; color: #333; font-size: 0.6rem; line-height: 1.8; }
+.footer a { color: #555; }
+
+.card.hidden { display: none; }
+
+/* ─── Mobile: 2 columns minimum ─── */
+@media (max-width: 400px) { .grid { grid-template-columns: repeat(2, 1fr); gap: 0.4rem; } }
+@media (min-width: 401px) and (max-width: 768px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 769px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <h1>🦞 Clawboard</h1>
+  <div class="sub">Agent Hub · DGX Spark</div>
+  <div class="status"><span class="dot"></span>Multi-Agent Local/Cloud · Tailscale Private</div>
+  <div class="health-summary" id="healthSummary">Checking services…</div>
+</div>
+
+<div class="search-wrap">
+  <span class="search-icon">🔍</span>
+  <input type="text" class="search-input" id="search" placeholder="Search apps..." oninput="filterCards()">
+</div>
+
+<div class="health-filter" id="healthFilter" aria-label="Filter apps by health">
+  <button type="button" class="active" data-health="all" onclick="setHealthFilter('all')"><span class="mini-dot unknown"></span>All <span data-count="all"></span></button>
+  <button type="button" data-health="reachable" onclick="setHealthFilter('reachable')"><span class="mini-dot reachable"></span>Reachable <span data-count="reachable"></span></button>
+  <button type="button" data-health="degraded" onclick="setHealthFilter('degraded')"><span class="mini-dot degraded"></span>Degraded <span data-count="degraded"></span></button>
+  <button type="button" data-health="down" onclick="setHealthFilter('down')"><span class="mini-dot down"></span>Down <span data-count="down"></span></button>
+  <button type="button" data-health="static" onclick="setHealthFilter('static')"><span class="mini-dot static"></span>Static <span data-count="static"></span></button>
+</div>
+
+<div class="action-queue" id="actionQueue">
+  <div class="action-queue-head">
+    <div>
+      <h2>Action Queue</h2>
+      <p>Mark offline apps for recovery or mark any app for editing. This queue is shared, so I can read the selected apps and your notes later.</p>
+      <div class="queue-status" id="queueStatus">Loading shared queue…</div>
+    </div>
+    <div class="action-queue-controls">
+      <button type="button" class="action-btn" onclick="copyActionPrompt('recover')">Copy turn-on request</button>
+      <button type="button" class="action-btn" onclick="copyActionPrompt('edit')">Copy edit request</button>
+      <button type="button" class="action-btn" onclick="clearSelections()">Clear selections</button>
+    </div>
+  </div>
+  <div class="action-columns">
+    <div class="action-box">
+      <h3>Turn On</h3>
+      <p>Use the Recover checkbox on cards that are down or degraded.</p>
+      <div class="selection-list empty" id="recoverList">No apps selected.</div>
+      <label class="prompt-label" for="recoverNotes">What is wrong</label>
+      <textarea class="prompt-box notes-box" id="recoverNotes" placeholder="Example: these stopped responding after the last restart, start with agent status first" oninput="handleNotesInput('recover')"></textarea>
+      <label class="prompt-label" for="recoverPrompt">Request preview</label>
+      <textarea class="prompt-box" id="recoverPrompt" readonly></textarea>
+    </div>
+    <div class="action-box">
+      <h3>Edit</h3>
+      <p>Use the Edit checkbox on any card you want to revisit or change.</p>
+      <div class="selection-list empty" id="editList">No apps selected.</div>
+      <label class="prompt-label" for="editNotes">What needs work</label>
+      <textarea class="prompt-box notes-box" id="editNotes" placeholder="Example: simplify mobile layout, fix buttons, add a queue view" oninput="handleNotesInput('edit')"></textarea>
+      <label class="prompt-label" for="editPrompt">Request preview</label>
+      <textarea class="prompt-box" id="editPrompt" readonly></textarea>
+    </div>
+  </div>
+</div>
+
+<div class="tabs" id="tabs"></div>
+
+<div id="appContainer"></div>
+
+<div class="no-results" id="noResults">No apps found</div>
+
+<div class="footer">
+  🦞 Clawboard · Built by the OpenClaw agent team<br>
+  NVIDIA DGX Spark · <a href="how-it-was-done.html">How it was done</a> · <a href="app-registry.json">Registry</a>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════
+   Registry-driven Clawboard
+   Source of truth: app-registry.json
+   ═══════════════════════════════════════════ */
+
+let registry = null;
+let activeTab = 'all';
+let activeHealth = 'all';
+let healthState = {};  // serviceId → true/false/null
+let appHealthState = {};  // appId → reachable/degraded/down/static/unknown
+let recoverSelection = new Set();
+let editSelection = new Set();
+let recoverNotes = '';
+let editNotes = '';
+let queueSaveTimer = null;
+
+async function init() {
+  try {
+    const res = await fetch('app-registry.json?_=' + Date.now());
+    registry = await res.json();
+  } catch (e) {
+    document.getElementById('appContainer').innerHTML =
+      '<p style="color:#f44;text-align:center;padding:2rem">Failed to load app-registry.json</p>';
+    return;
+  }
+
+  await loadSelections();
+  buildTabs();
+  buildCards();
+  updateActionPanel();
+  runHealthChecks();
+  // Re-check health every 60s
+  setInterval(runHealthChecks, 60000);
+}
+
+/* ─── Tabs ─── */
+function buildTabs() {
+  const container = document.getElementById('tabs');
+  const cats = registry.categories.sort((a, b) => a.order - b.order);
+  const allCount = registry.apps.length;
+
+  let html = `<div class="tab active" data-cat="all" onclick="setTab('all')">All <span class="tab-count" data-tab-count="all">${allCount}</span></div>`;
+  html += `<div class="tab" data-cat="offline" onclick="setTab('offline')">Offline <span class="tab-count" data-tab-count="offline"></span></div>`;
+  for (const cat of cats) {
+    const count = registry.apps.filter(a => a.category === cat.id).length;
+    html += `<div class="tab" data-cat="${cat.id}" onclick="setTab('${cat.id}')">${cat.label} <span class="tab-count" data-tab-count="${cat.id}">${count}</span></div>`;
+  }
+  container.innerHTML = html;
+}
+
+/* ─── Cards ─── */
+function buildCards() {
+  const container = document.getElementById('appContainer');
+  const cats = registry.categories.sort((a, b) => a.order - b.order);
+  let html = '';
+
+  for (const cat of cats) {
+    const apps = registry.apps.filter(a => a.category === cat.id);
+    if (!apps.length) continue;
+
+    html += `<div class="section-label cat-label" data-cat="${cat.id}">${cat.label}</div>`;
+    html += `<div class="grid" data-cat="${cat.id}">`;
+
+    for (const app of apps) {
+      const accent = app.accent ? `border-color:${app.accent};background:linear-gradient(135deg,#0e0e1a,${app.accent}12)` : '';
+      const onclick = app.onclick ? `onclick="${app.onclick}"` : '';
+      const tagHtml = (app.tags || []).map(t => {
+        const cls = t === 'game' ? 'game' : t === 'tool' ? 'tool' : t === 'archive' ? '' : '';
+        return `<span class="tag ${cls}">${t}</span>`;
+      }).join('');
+
+      html += `<a class="card" href="${app.href}" data-cat="${app.category}" data-id="${app.id}" data-title="${escapeHtml(app.title)}" data-health="unknown" data-search="${app.search || ''}" style="${accent}" ${onclick}>
+        <div class="health-dot unknown" data-app="${app.id}"></div>
+        <span class="emoji">${app.emoji}</span>
+        <h2>${app.title}</h2>
+        <p>${app.description}</p>
+        ${tagHtml ? `<div class="tags">${tagHtml}</div>` : ''}
+        <div class="card-actions">
+          <label class="action-chip" data-kind="recover" onclick="event.stopPropagation();">
+            <input type="checkbox" data-action="recover" data-app-id="${app.id}" onclick="event.stopPropagation();" onchange="toggleAppAction(event, '${app.id}', 'recover')">
+            Recover
+          </label>
+          <label class="action-chip" data-kind="edit" onclick="event.stopPropagation();">
+            <input type="checkbox" data-action="edit" data-app-id="${app.id}" onclick="event.stopPropagation();" onchange="toggleAppAction(event, '${app.id}', 'edit')">
+            Edit
+          </label>
+        </div>
+      </a>`;
+    }
+    html += '</div>';
+  }
+  container.innerHTML = html;
+}
+
+/* ─── Health Checks ─── */
+async function runHealthChecks() {
+  const results = {};
+
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 5000);
+    const res = await fetch('/api/clawboard/health?_=' + Date.now(), { signal: ctrl.signal });
+    clearTimeout(timer);
+    const data = await res.json();
+    for (const [id, service] of Object.entries(data.services || {})) {
+      results[id] = !!service.ok;
+    }
+  } catch {
+    for (const id of Object.keys(registry.serviceEndpoints || {})) {
+      results[id] = false;
+    }
+  }
+  healthState = results;
+
+  // Update per-app health dots and card states.
+  appHealthState = {};
+  for (const app of registry.apps) {
+    const dot = document.querySelector(`.health-dot[data-app="${app.id}"]`);
+    const card = document.querySelector(`.card[data-id="${app.id}"]`);
+    if (!dot || !card) continue;
+
+    const deps = app.healthDeps || [];
+    let state = 'unknown';
+    if (deps.length === 0) {
+      state = 'static';
+      dot.className = 'health-dot static';
+      dot.title = 'Static app: no live service dependency';
+    } else {
+      const states = deps.map(d => healthState[d]);
+      const up = states.filter(s => s === true).length;
+      const down = states.filter(s => s === false).length;
+
+      if (up === deps.length) {
+        state = 'reachable';
+        dot.className = 'health-dot healthy';
+        dot.title = 'All dependencies reachable';
+      } else if (down === deps.length) {
+        state = 'down';
+        dot.className = 'health-dot down';
+        dot.title = 'No dependencies reachable';
+      } else if (up > 0) {
+        state = 'degraded';
+        dot.className = 'health-dot degraded';
+        dot.title = 'Some dependencies reachable';
+      } else {
+        dot.className = 'health-dot unknown';
+        dot.title = 'Health not checked';
+      }
+    }
+    card.dataset.health = state;
+    appHealthState[app.id] = state;
+  }
+
+  // Update header summary
+  const allIds = Object.keys(results);
+  const upCount = allIds.filter(id => results[id]).length;
+  const downCount = allIds.filter(id => !results[id]).length;
+  const summary = document.getElementById('healthSummary');
+  summary.textContent = `${upCount}/${allIds.length} services reachable`;
+  summary.style.color = downCount === 0 ? '#40a02b' : downCount <= 3 ? '#f59e0b' : '#ef4444';
+
+  updateHealthFilterCounts();
+  refreshCardActionStates();
+  filterCards();
+}
+
+function updateHealthFilterCounts() {
+  const counts = { all: registry.apps.length, reachable: 0, degraded: 0, down: 0, static: 0 };
+  for (const state of Object.values(appHealthState)) {
+    if (Object.prototype.hasOwnProperty.call(counts, state)) counts[state]++;
+  }
+  document.querySelectorAll('[data-count]').forEach(el => {
+    const key = el.dataset.count;
+    el.textContent = counts[key] ? `(${counts[key]})` : '';
+  });
+
+  const offlineCount = counts.down + counts.degraded;
+  document.querySelectorAll('[data-tab-count]').forEach(el => {
+    const key = el.dataset.tabCount;
+    if (key === 'offline') {
+      el.textContent = offlineCount ? offlineCount : '';
+      return;
+    }
+    if (key === 'all') {
+      el.textContent = registry.apps.length;
+      return;
+    }
+    const count = registry.apps.filter(app => app.category === key).length;
+    el.textContent = count ? count : '';
+  });
+}
+
+/* ─── Tab switching ─── */
+function setTab(cat) {
+  activeTab = cat;
+  document.querySelectorAll('.tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.cat === cat)
+  );
+  filterCards();
+}
+
+function setHealthFilter(state) {
+  activeHealth = state;
+  document.querySelectorAll('#healthFilter button').forEach(button =>
+    button.classList.toggle('active', button.dataset.health === state)
+  );
+  filterCards();
+}
+
+async function loadSelections() {
+  try {
+    const res = await fetch('/api/clawboard/queue?_=' + Date.now());
+    if (!res.ok) throw new Error(`Queue load failed: ${res.status}`);
+    const data = await res.json();
+    recoverSelection = new Set(Array.isArray(data.recover) ? data.recover : []);
+    editSelection = new Set(Array.isArray(data.edit) ? data.edit : []);
+    recoverNotes = String(data.recoverNotes || '');
+    editNotes = String(data.editNotes || '');
+    setQueueStatus(data.updatedAt ? `Shared queue loaded · ${data.updatedAt}` : 'Shared queue loaded');
+  } catch {
+    recoverSelection = new Set();
+    editSelection = new Set();
+    recoverNotes = '';
+    editNotes = '';
+    setQueueStatus('Shared queue unavailable, keeping local state in memory for this page');
+  }
+}
+
+async function persistSelections() {
+  try {
+    setQueueStatus('Saving shared queue…');
+    const res = await fetch('/api/clawboard/queue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        recover: [...recoverSelection],
+        edit: [...editSelection],
+        recoverNotes,
+        editNotes,
+      }),
+    });
+    if (!res.ok) throw new Error(`Queue save failed: ${res.status}`);
+    const data = await res.json();
+    setQueueStatus(data.updatedAt ? `Saved · ${data.updatedAt}` : 'Saved');
+  } catch {
+    setQueueStatus('Save failed');
+  }
+}
+
+function scheduleQueueSave() {
+  if (queueSaveTimer) clearTimeout(queueSaveTimer);
+  queueSaveTimer = setTimeout(() => {
+    queueSaveTimer = null;
+    persistSelections();
+  }, 250);
+}
+
+function setQueueStatus(message) {
+  const el = document.getElementById('queueStatus');
+  if (el) el.textContent = message;
+}
+
+function escapeHtml(value) {
+  return String(value || '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+}
+
+function isOfflineState(state) {
+  return state === 'down' || state === 'degraded';
+}
+
+function appTitle(appId) {
+  const app = (registry.apps || []).find(item => item.id === appId);
+  return app ? app.title : appId;
+}
+
+function refreshCardActionStates() {
+  document.querySelectorAll('.card').forEach(card => {
+    const appId = card.dataset.id;
+    const state = card.dataset.health;
+    const recoverChip = card.querySelector('[data-kind="recover"]');
+    const recoverInput = card.querySelector('input[data-action="recover"]');
+    const editInput = card.querySelector('input[data-action="edit"]');
+    const recoverAllowed = isOfflineState(state);
+
+    if (recoverInput) {
+      recoverInput.checked = recoverSelection.has(appId);
+      recoverInput.disabled = !recoverAllowed;
+      if (!recoverAllowed) recoverSelection.delete(appId);
+    }
+    if (recoverChip) {
+      recoverChip.classList.toggle('disabled', !recoverAllowed);
+      recoverChip.title = recoverAllowed ? 'Queue this app to bring back online' : 'Recover is available when an app is down or degraded';
+    }
+    if (editInput) {
+      editInput.checked = editSelection.has(appId);
+    }
+    card.dataset.queueRecover = recoverSelection.has(appId) ? 'true' : 'false';
+    card.dataset.queueEdit = editSelection.has(appId) ? 'true' : 'false';
+  });
+  updateActionPanel();
+}
+
+function toggleAppAction(event, appId, mode) {
+  event.stopPropagation();
+  const checked = !!event.target.checked;
+  const targetSet = mode === 'recover' ? recoverSelection : editSelection;
+  if (checked) targetSet.add(appId);
+  else targetSet.delete(appId);
+  refreshCardActionStates();
+  scheduleQueueSave();
+}
+
+function handleNotesInput(mode) {
+  if (mode === 'recover') {
+    recoverNotes = document.getElementById('recoverNotes').value;
+  } else {
+    editNotes = document.getElementById('editNotes').value;
+  }
+  updateActionPanel();
+  scheduleQueueSave();
+}
+
+function clearSelections() {
+  recoverSelection.clear();
+  editSelection.clear();
+  recoverNotes = '';
+  editNotes = '';
+  refreshCardActionStates();
+  scheduleQueueSave();
+}
+
+function composePrompt(mode) {
+  const ids = [...(mode === 'recover' ? recoverSelection : editSelection)];
+  const notes = (mode === 'recover' ? recoverNotes : editNotes).trim();
+  if (!ids.length) {
+    return mode === 'recover'
+      ? 'Select one or more offline apps with the Recover checkbox to build a turn-on request.'
+      : 'Select one or more apps with the Edit checkbox to build an edit request.';
+  }
+  const titles = ids.map(appTitle).join(', ');
+  const base = mode === 'recover'
+    ? `Turn these Clawboard apps back on: ${titles}.`
+    : `I want to edit these Clawboard apps: ${titles}.`;
+  return notes ? `${base} Notes: ${notes}` : base;
+}
+
+function updateActionPanel() {
+  const recoverNames = [...recoverSelection].map(appTitle);
+  const editNames = [...editSelection].map(appTitle);
+  const recoverList = document.getElementById('recoverList');
+  const editList = document.getElementById('editList');
+  const recoverPrompt = document.getElementById('recoverPrompt');
+  const editPrompt = document.getElementById('editPrompt');
+  const recoverNotesEl = document.getElementById('recoverNotes');
+  const editNotesEl = document.getElementById('editNotes');
+
+  recoverList.textContent = recoverNames.length ? recoverNames.join(', ') : 'No apps selected.';
+  recoverList.classList.toggle('empty', !recoverNames.length);
+  editList.textContent = editNames.length ? editNames.join(', ') : 'No apps selected.';
+  editList.classList.toggle('empty', !editNames.length);
+  if (recoverNotesEl && recoverNotesEl.value !== recoverNotes) recoverNotesEl.value = recoverNotes;
+  if (editNotesEl && editNotesEl.value !== editNotes) editNotesEl.value = editNotes;
+  recoverPrompt.value = composePrompt('recover');
+  editPrompt.value = composePrompt('edit');
+}
+
+async function copyActionPrompt(mode) {
+  const text = composePrompt(mode);
+  try {
+    await navigator.clipboard.writeText(text);
+    const button = [...document.querySelectorAll('.action-btn')].find(btn => btn.textContent.toLowerCase().includes(mode === 'recover' ? 'turn-on' : 'edit request'));
+    if (button) {
+      const original = button.textContent;
+      button.textContent = 'Copied';
+      setTimeout(() => { button.textContent = original; }, 1200);
+    }
+  } catch {
+    const target = document.getElementById(mode === 'recover' ? 'recoverPrompt' : 'editPrompt');
+    if (target) {
+      target.focus();
+      target.select();
+    }
+  }
+}
+
+/* ─── Search & filter ─── */
+function filterCards() {
+  const q = document.getElementById('search').value.toLowerCase().trim();
+  let visible = 0;
+
+  document.querySelectorAll('.card').forEach(card => {
+    const cat = card.dataset.cat;
+    const search = (card.dataset.search || '') + ' ' + card.textContent.toLowerCase();
+    const matchTab = activeTab === 'all' || (activeTab === 'offline' ? isOfflineState(card.dataset.health) : cat === activeTab);
+    const matchHealth = activeHealth === 'all' || card.dataset.health === activeHealth;
+    const matchSearch = !q || search.includes(q);
+    const show = matchTab && matchHealth && matchSearch;
+    card.classList.toggle('hidden', !show);
+    if (show) visible++;
+  });
+
+  // Show/hide section labels and grids
+  document.querySelectorAll('.cat-label').forEach(label => {
+    const cat = label.dataset.cat;
+    if (activeTab !== 'all' && activeTab !== 'offline' && cat !== activeTab) {
+      label.style.display = 'none';
+      return;
+    }
+    const grid = document.querySelector(`.grid[data-cat="${cat}"]`);
+    const hasVisible = grid ? [...grid.querySelectorAll('.card')].some(c => !c.classList.contains('hidden')) : false;
+    label.style.display = hasVisible ? '' : 'none';
+  });
+
+  document.getElementById('noResults').style.display = visible === 0 ? 'block' : 'none';
+}
+
+init();
+</script>
+</body>
+</html>
